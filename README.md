@@ -29,3 +29,18 @@ The *locate()* function triggers an attempt to locate the devce. It may be calle
 The *getLocation()* function returns a table with *either* the keys *latitude* and *longitude*, *or* the key *err*. These keys’ values will be the device’s co-ordinates as determined by the geolocation API.
 
 If an error
+
+### Example
+
+```squirrel
+locale = locator.getLocation();
+if (!("err" in locale)) {
+    if (debug) server.log("Location: " + locale.longitude + ", " + locale.latitude);
+        getForecast();
+    } else {
+        server.error(locale.err);
+    }
+}
+```
+
+
