@@ -1,4 +1,4 @@
-# Location
+# Location 1.1.0
 
 Location is a Squirrel driver class written to provide support for Google’s geolocation API on Electric Imp devices.
 
@@ -39,9 +39,26 @@ locator = Location("<YOUR_GEOLOCATION_API_KEY>", true);
 
 ## Public Functions
 
-### locate(*usePrevious[, callback]*)
+### locate(*[usePrevious][, callback]*)
 
 The *locate()* function triggers an attempt to locate the devce. It may be called by either the agent or device instance. If called by the agent instance, it is recommended that you first check that the device is connected. An optional callback function may be passed if your application needs to be notified when the location has been determined (or not).
+
+The *usePrevious* parameter is also optional: pass `true` to make use of an existing record of nearby WiFi networks. This defaults to `false`, in which case the device will always be asked to gather a list of nearby networks. If you pass `true` and the device lacks such a list, it will automatically create one.
+
+### Example
+
+```squirrel
+locator.locate(false, function() {
+    locale = locator.getLocation();
+    if (!("err" in locale)) {
+        if (debug) server.log("Location: " + locale.longitude + ", " + locale.latitude);
+        getForecast();
+    } else {
+        server.error(locale.err);
+        imp.wakeup(30, initialise);
+    }
+});
+```
 
 ### getLocation()
 
