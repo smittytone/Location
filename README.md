@@ -25,8 +25,7 @@ Consider a weather station application. In this case, the agent needs to determi
 locator <- Location("<YOUR_GEOLOCATION_API_KEY>", true);
 
 if (server.isconnected()) {
-    // Get location then signal to the agent that
-    // the device is ready to display a forecast
+    // Signal to the agent that the device is ready to display a forecast
     agent.send("ready", true);
 } else {
     // Try to connect to the server
