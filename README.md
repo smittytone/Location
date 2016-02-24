@@ -6,6 +6,25 @@ It should be inlcuded and instantiated in **both** device code and agent code. T
 
 Google’s [geolocation API](https://developers.google.com/maps/documentation/geolocation/intro) controls access through the use of an API key. You must obtain your own API key and pass it into the device and agent instances of the Location class at instantiation.
 
+### Typical Flow
+
+Consider a weather station application. In this case, the agent needs to determine the device’s location in order to pass the co-ordinates to a third-party weather forecast API. The agent therefore initiates the process only when the device has connected:
+
+- Agent calls [the *locate()* function](#locate-useprevious-callback) which messages the device.
+- Device gathers all nearby wireless networks and returns this to the agent.
+- Agent sends network list to Google’s geolocation API.
+- Google returns the determined latitude and longitude.
+- Agent asynchronously process the data returned by google.
+- Agent stores the location locally and uses it to format the message to be sent to the weather forecast API.
+- Agent relays the location to the device.
+- Device stores its location locally for future reference.
+
+### Rate Limits
+
+Google rate-limits access to the geolocation API on both a second-by-second and on a day-by-day basis. If you exceed these limits (typically because a great many devices have requested their locations at once, or do so more than once a day), the class will take appropriate behaviour: attempt to reacquire the location at 00:01 the following day (in the case of the 24-hour limit being exceeded) or in ten seconds’ time (momentary rate limit).
+
+Details of the limits Google applies can be found [here](https://developers.google.com/maps/documentation/geolocation/usage-limits).
+
 ## Constructor
 
 ### Location(*apiKey[, debugFlag]*)
@@ -26,21 +45,15 @@ The *locate()* function triggers an attempt to locate the devce. It may be calle
 
 ### getLocation()
 
-The *getLocation()* function returns a table with *either* the keys *latitude* and *longitude*, *or* the key *err*. These keys’ values will be the device’s co-ordinates as determined by the geolocation API.
-
-If an error
+The *getLocation()* function returns a table with *either* the keys *latitude* and *longitude*, *or* the key *err*. The first two of these keys’ values will be the device’s co-ordinates as determined by the geolocation API. The *err* key is *only* present when an error has taken place, and so should be used as an error check.
 
 ### Example
 
 ```squirrel
 locale = locator.getLocation();
 if (!("err" in locale)) {
-    if (debug) server.log("Location: " + locale.longitude + ", " + locale.latitude);
-        getForecast();
-    } else {
-        server.error(locale.err);
-    }
+    server.log("Location: " + locale.longitude + ", " + locale.latitude);
+} else {
+    server.error(locale.err);
 }
 ```
-
-
