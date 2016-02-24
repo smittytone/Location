@@ -59,15 +59,17 @@ class Location {
     function locate(usePrevious = false, callback = null) {
         // Triggers an attempt to locate the device. If a callback is passed,
         // it will be called to when the location has been found
+
+        // Already checking? Bail
+        if (_locating) return;
         _locating = true;
+
         if (callback != null) _locatedCallback = callback;
 
         if (_isDevice == true) {
             // Device first sends the WLAN scan data to the agent
             if (_debug) server.log("Sending WiFi data to agent");
-
             if (_networks == null) _networks = imp.scanwifinetworks();
-
             if (usePrevious) {
                 agent.send("location.class.internal.setwlans", _networks);
             } else {
@@ -88,7 +90,9 @@ class Location {
             locale.longitude <- _long;
             locale.latitude <- _lat;
         } else {
-            locale.err <- "Device location not yet obtained";
+            locale.err = "Error determining device location";
+            if (!_located) locale.err <- "Device location not yet obtained. Please call 'locate()' function";
+            if (_locating) locale.err <- "Device location not yet obtained. Please try again shortly";
         }
         return locale;
     }
