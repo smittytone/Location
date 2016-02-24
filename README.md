@@ -19,6 +19,45 @@ Consider a weather station application. In this case, the agent needs to determi
 - Agent relays the location to the device.
 - Device stores its location locally for future reference.
 
+#### Device Code
+
+```squirrel
+locator <- Location("<YOUR_GEOLOCATION_API_KEY>", true);
+
+if (server.isconnected()) {
+    // Get location then signal to the agent that
+    // the device is ready to display a forecast
+    agent.send("ready", true);
+} else {
+    // Try to connect to the server
+    server.connect(disconnectHandler, 30);
+}
+```
+
+#### Agent Code
+
+```squirrel
+locator <- Location("<YOUR_GEOLOCATION_API_KEY>", true);
+
+device.on("ready", function(dummy) {
+    // The following code runs in response to receipt of 'ready' message from device
+    locator.locate(false, function() {
+        // Code below called when location is determined (or an error generated)
+        local locale = locator.getLocation();
+        if (!("err" in locale)) {
+            // No error, so extract the co-ordinates
+            server.log("Device location: " + locale.longitude + ", " + locale.latitude);
+            
+            // Call the weather forecast service
+            getWeatherForecast(locale.longitude, locale.latitude);  
+        } else {
+            // Report error
+            server.error(locale.err);
+        }
+    });
+});
+```
+
 ### Rate Limits
 
 Google rate-limits access to the geolocation API on both a second-by-second and on a day-by-day basis. If you exceed these limits (typically because a great many devices have requested their locations at once, or do so more than once a day), the class will take appropriate behaviour: attempt to reacquire the location at 00:01 the following day (in the case of the 24-hour limit being exceeded) or in ten seconds’ time (momentary rate limit).
@@ -49,13 +88,11 @@ The *usePrevious* parameter is also optional: pass `true` to make use of an exis
 
 ```squirrel
 locator.locate(false, function() {
-    locale = locator.getLocation();
+    locale = locator.getLocation();  // 'locale' is a global table variable
     if (!("err" in locale)) {
-        if (debug) server.log("Location: " + locale.longitude + ", " + locale.latitude);
-        getForecast();
+        server.log("Device location: " + locale.longitude + ", " + locale.latitude);
     } else {
         server.error(locale.err);
-        imp.wakeup(30, initialise);
     }
 });
 ```
@@ -69,7 +106,7 @@ The *getLocation()* function returns a table with *either* the keys *latitude* a
 ```squirrel
 locale = locator.getLocation();
 if (!("err" in locale)) {
-    server.log("Location: " + locale.longitude + ", " + locale.latitude);
+    server.log("Device location: " + locale.longitude + ", " + locale.latitude);
 } else {
     server.error(locale.err);
 }
