@@ -10,7 +10,7 @@ Google’s [geolocation API](https://developers.google.com/maps/documentation/ge
 
 Consider a weather station application. In this case, the agent needs to determine the device’s location in order to pass the co-ordinates to a third-party weather forecast API. The agent therefore initiates the process only when the device has connected:
 
-- Agent calls [the *locate()* function](#locate-useprevious-callback) which messages the device.
+- Agent calls [the *locate()* function](#locateuseprevious-callback) which messages the device.
 - Device gathers all nearby wireless networks and returns this to the agent.
 - Agent sends network list to Google’s geolocation API.
 - Google returns the determined latitude and longitude.
