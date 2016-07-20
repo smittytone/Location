@@ -40,7 +40,7 @@ class Location {
 
             // Register handler for when device sends initial WLAN scan data
             device.on("location.class.internal.setwlans", _loctateFromWLANs.bindenv(this));
-            if (_debug) server.log("Location class instantiated");
+            if (_debug) server.log("Location class instantiated on the agent");
         } else {
             // Running on a device
             _isDevice = true;
@@ -52,7 +52,7 @@ class Location {
 
             // Register handler for when agent sends location data to device
             agent.on("location.class.internal.setloc", _setLocale.bindenv(this));
-            if (_debug) server.log("Location class instantiated");
+            if (_debug) server.log("Location class instantiated on the device");
         }
     }
 
@@ -90,7 +90,6 @@ class Location {
             locale.longitude <- _long;
             locale.latitude <- _lat;
         } else {
-            locale.err = "Error determining device location";
             if (!_located) locale.err <- "Device location not yet obtained. Please call 'locate()' function";
             if (_locating) locale.err <- "Device location not yet obtained. Please try again shortly";
         }
