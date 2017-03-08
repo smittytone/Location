@@ -1,4 +1,4 @@
-# Location 1.1.1
+# Location 1.2.0
 
 Location is a Squirrel class written to provide support for Google’s geolocation API on Electric Imp devices.
 
@@ -63,6 +63,12 @@ Google rate-limits access to the geolocation API on both a second-by-second and 
 
 Details of the limits Google applies can be found [here](https://developers.google.com/maps/documentation/geolocation/usage-limits).
 
+## Release Notes
+
+- 1.2.0 &mdash; Make imp.scanwifinetworks() calls asynchronous (requires impOS 36); *locate()* now uses a previously gathered list of WLANs, if present, by default.
+- 1.1.1 &mdash; Minor code changes.
+- 1.1.0 &mdash; Initial release.
+
 ## Constructor
 
 ### Location(*googleGeoLocationApiKey[, debugFlag]*)
@@ -82,7 +88,7 @@ locator = Location("<YOUR_GEOLOCATION_API_KEY>", true);
 
 The *locate()* function triggers an attempt to locate the device. It may be called by either the agent or device instance. If called by the agent instance, it is recommended that you first check that the device is connected. An optional callback function may be passed if your application needs to be notified when the location has been determined (or not).
 
-The *usePrevious* parameter is also optional: pass `true` to make use of an existing record of nearby WiFi networks. This defaults to `false`, in which case the device will always be asked to gather a list of nearby networks. If you pass `true` and the device lacks such a list, it will automatically create one.
+The *usePrevious* parameter is also optional: pass `true` to make use of an existing record of nearby WiFi networks, if one is available. This defaults to `true`. If you pass `true` and the device lacks such a list, it will automatically create one.
 
 ### Example
 
