@@ -138,7 +138,7 @@ class Location {
             locale.longitude <- _long;
             locale.latitude <- _lat;
         } else {
-            if (!_located) locale.err <- "Device location not yet obtained. Please call 'locate()' function";
+            if (!_located) locale.err <- "Device location not yet obtained or cannot be obtained";
             if (_locating) locale.err <- "Device location not yet obtained. Please try again shortly";
         }
         return locale;
@@ -163,6 +163,15 @@ class Location {
         // and send it to Google, which should return a location record
         if (networks) _networks = networks;
         if (networks == null && _networks != null) networks = _networks;
+
+        if (networks == null) {
+            // If we have no nearby WLANs and no saved list from a previous scan,
+            // we can't proceed, so we need to warn the user
+            server.error("Location can find no nearby networks from which the device's location can be determined.");
+            _located = false;
+            _locating = false;
+            return;
+        }
 
         local url = "https://www.googleapis.com/geolocation/v1/geolocate?key=" + _apiKey;
         local header = {"Content-Type" : "application/json"};
