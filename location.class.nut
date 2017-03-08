@@ -5,8 +5,10 @@ class Location {
     // necessary on the agent. It is designed to be called once during a device's
     // current runtime, in order to determine the device’s latitude and longitude,
     // to pass into a weather forecast service, for example.
+    //
+    // Copyright Tony Smith, 2016-17
 
-    static version = [1,1,0];
+    static version = "1.1.1";
 
     _lat = 0;
     _long = 0;
@@ -69,8 +71,8 @@ class Location {
         if (_isDevice == true) {
             // Device first sends the WLAN scan data to the agent
             if (_debug) server.log("Sending WiFi data to agent");
-            if (_networks == null) _networks = imp.scanwifinetworks();
             if (usePrevious) {
+                if (_networks == null) _networks = imp.scanwifinetworks();
                 agent.send("location.class.internal.setwlans", _networks);
             } else {
                 agent.send("location.class.internal.setwlans", imp.scanwifinetworks());
@@ -96,7 +98,7 @@ class Location {
         return locale;
     }
 
-    // Private functions - DO NOT CALL
+    // ********** Private functions - DO NOT CALL **********
 
     // AGENT functions
 
