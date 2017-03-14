@@ -8,7 +8,7 @@ class Location {
     //
     // Copyright Tony Smith, 2016-17
 
-    static version = "1.1.1";
+    static VERSION = "1.1.1";
 
     _lat = 0;
     _long = 0;
