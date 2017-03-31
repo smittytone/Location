@@ -60,7 +60,7 @@ class Location {
                     // Error indicates we're probably running another scan
                     if (_debug) server.log("device.constructor: WiFi scan already in progress");
                 }
-            });
+            }.bindenv(this));
 
             // Register handler for when agent sends location data to device
             agent.on("location.class.internal.setloc", _setLocale.bindenv(this));
