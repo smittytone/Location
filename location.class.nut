@@ -50,15 +50,22 @@ class Location {
 
             // Register handler for when agent asks for WiFi scan data
             agent.on("location.class.internal.getwlans", function(dummy) {
-                try {
-                    imp.scanwifinetworks(function(wlans) {
-                        // Scan operates asynchronously
-                        _networks = wlans;
-                        agent.send("location.class.internal.setwlans", wlans);
-                    }.bindenv(this));
-                } catch (err) {
-                    // Error indicates we're probably running another scan
-                    if (_debug) server.log("device.constructor: WiFi scan already in progress");
+                if ("info" in imp) {
+                    // We are on 36 or above, so use async scanning
+                    try {
+                        imp.scanwifinetworks(function(wlans) {
+                            // Scan operates asynchronously
+                            _networks = wlans;
+                            agent.send("location.class.internal.setwlans", wlans);
+                        }.bindenv(this));
+                    } catch (err) {
+                        // Error indicates we're probably running another scan
+                        if (_debug) server.log("device.constructor: WiFi scan already in progress");
+                    }
+                } else {
+                    // We are on 34 or less, so use sync scanning
+                    _networks = imp.scanwifinetworks();
+                    agent.send("location.class.internal.setwlans", _networks);
                 }
             }.bindenv(this));
 
