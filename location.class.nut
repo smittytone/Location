@@ -35,8 +35,7 @@ class Location {
 
             // Check for a value Google Geolocation API key
             if (apiKey == null) {
-                server.error("Location class requires a non-null API key. It cannot proceed without one");
-                return null;
+                throw "Location class requires a non-null API key. It cannot proceed without one";
             } else {
                 _apiKey = apiKey;
             }
