@@ -166,12 +166,14 @@ class Location {
     {
         // This is run *only* on an agent, to process WLAN scan data from the device
         // and send it to Google, which should return a location record
+        if (_debug) server.log("There are " + networks.len() + " WLANs around device");
         if (networks) _networks = networks;
         if (networks == null && _networks != null) networks = _networks;
 
         if (networks == null) {
             // If we have no nearby WLANs and no saved list from a previous scan,
-            // we can't proceed, so we need to warn the user
+            // we can't proceed, so we need to warn the user. Note this will be reported
+            // to the host app when 'getLocation()' is called
             server.error("Location can find no nearby networks from which the device's location can be determined.");
             _located = false;
             _locating = false;
@@ -198,6 +200,7 @@ class Location {
     function _processLocation(response) {
         // This is run *only* on an agent, to process data returned by Google
         if (_debug) server.log("Processing data received from Google");
+
         _locating = false;
         local data = http.jsondecode(response.body);
         if (response.statuscode == 200) {
