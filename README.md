@@ -2,14 +2,17 @@
 
 Location is a Squirrel class written to provide support for Google’s geolocation API on Electric Imp devices.
 
-It should be included and instantiated in **both** device code and agent code. The two instances will communicate as required to locate the device based on nearby WiFi networks. This data is sent to Google by the agent instance, which returns the device’s latitude and longitude.
+It should be included and instantiated in **both** device code and agent code &mdash; use the same code for both. The two instances will communicate as required to locate the device based on nearby WiFi networks. This data is sent to Google by the agent instance, which returns the device’s latitude and longitude.
 
 Google’s [geolocation API](https://developers.google.com/maps/documentation/geolocation/intro) controls access through the use of an API key. You must obtain your own API key and pass it into the device and agent instances of the Location class at instantiation.
 
+**Note** Version 1.2.0 adds support for impOS&trade; 36’s asynchronous version of *imp.scanwifinetworks()*. This version is compatible with earlier versions of impOS.
+
 ### Typical Flow
 
-Consider a weather station application. In this case, the agent needs to determine the device’s location in order to pass the co-ordinates to a third-party weather forecast API. The agent therefore initiates the process when the device has signalled its readiness:
+Consider a weather station application. In this case, the agent needs to determine the device’s location in order to pass the co-ordinates to a third-party weather forecast API. The agent therefore initiates the process *when the device has signalled its readiness*:
 
+1. Device completes start-up and signals its readiness to its agent.
 1. Agent calls [the *locate()* function](#locateuseprevious-callback) which messages the device.
 2. Device gathers all nearby wireless networks and returns this to the agent.
 3. Agent sends network list to Google’s geolocation API.
@@ -65,9 +68,13 @@ Details of the limits Google applies can be found [here](https://developers.goog
 
 ## Release Notes
 
-- 1.2.0 &mdash; Make imp.scanwifinetworks() calls asynchronous (requires impOS 36); *locate()* now uses a previously gathered list of WLANs, if present, by default.
-- 1.1.1 &mdash; Minor code changes.
-- 1.1.0 &mdash; Initial release.
+- 1.2.0
+    - Make imp.scanwifinetworks() calls asynchronous (requires impOS 36)
+    - *locate()* now uses a previously gathered list of WLANs, if present, by default.
+- 1.1.1
+    - Minor code changes.
+- 1.1.0
+    - Initial release.
 
 ## Constructor
 

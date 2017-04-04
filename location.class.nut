@@ -51,10 +51,9 @@ class Location {
             // Register handler for when agent asks for WiFi scan data
             agent.on("location.class.internal.getwlans", function(dummy) {
                 if ("info" in imp) {
-                    // We are on 36 or above, so use async scanning
+                    // We are on 36 or above, so we can use async scanning
                     try {
                         imp.scanwifinetworks(function(wlans) {
-                            // Scan operates asynchronously
                             _networks = wlans;
                             agent.send("location.class.internal.setwlans", wlans);
                         }.bindenv(this));
