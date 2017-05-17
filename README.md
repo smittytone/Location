@@ -1,4 +1,4 @@
-# Location 1.2.0
+# Location 1.2.1
 
 Location is a Squirrel class written to provide support for Google’s geolocation API on Electric Imp devices.
 
@@ -68,6 +68,8 @@ Details of the limits Google applies can be found [here](https://developers.goog
 
 ## Release Notes
 
+- 1.2.1
+    - Small code tweaks
 - 1.2.0
     - Make imp.scanwifinetworks() calls asynchronous (requires impOS 36)
     - *locate()* now uses a previously gathered list of WLANs, if present, by default.

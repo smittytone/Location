@@ -8,7 +8,7 @@ class Location {
     //
     // Copyright Tony Smith, 2016-17
 
-    static version = "1.2.0";
+    static VERSION = "1.2.1";
 
     _lat = 0;
     _long = 0;
@@ -42,7 +42,6 @@ class Location {
 
             // Register handler for when device sends WLAN scan data
             device.on("location.class.internal.setwlans", _loctateFromWLANs.bindenv(this));
-
             if (_debug) server.log("Location class instantiated on the agent");
         } else {
             // Code is running on a device
