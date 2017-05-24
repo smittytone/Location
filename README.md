@@ -25,7 +25,7 @@ Consider a weather station application. In this case, the agent needs to determi
 #### Device Code
 
 ```squirrel
-locator <- Location("<YOUR_GEOLOCATION_API_KEY>");
+locator <- Location();
 
 if (server.isconnected()) {
     // Signal to the agent that the device is ready to display a forecast
@@ -69,9 +69,9 @@ Details of the limits Google applies can be found [here](https://developers.goog
 ## Release Notes
 
 - 1.2.1
-    - Small code tweaks
+    - Small code tweaks; clarify that the API key is only needed by the agent constructor.
 - 1.2.0
-    - Make imp.scanwifinetworks() calls asynchronous (requires impOS 36)
+    - Make imp.scanwifinetworks() calls asynchronous (requires impOS 36).
     - *locate()* now uses a previously gathered list of WLANs, if present, by default.
 - 1.1.1
     - Minor code changes.
@@ -82,7 +82,7 @@ Details of the limits Google applies can be found [here](https://developers.goog
 
 ### Location(*googleGeoLocationApiKey[, debugFlag]*)
 
-The constructor’s two parameters are your Google geolocation API key (mandatory) and an optional debugging flag. The latter defaults to `false` &mdash; progress reports will not be logged.
+The constructor’s two parameters are your Google geolocation API key (mandatory on the agent instance; not required for the device instance) and an optional debugging flag. The latter defaults to `false` &mdash; progress reports will not be logged.
 
 ### Example
 
