@@ -8,7 +8,7 @@ class Location {
     //
     // Copyright Tony Smith, 2016-17
 
-    static VERSION = "1.2.1";
+    static VERSION = "1.2.2";
 
     _lat = 0;
     _long = 0;
@@ -21,7 +21,7 @@ class Location {
     _apiKey = null;
     _debug = false;
 
-    // Public functions
+    // ********** Public functions **********
 
     constructor(apiKey = null, debug = false) {
         // The constructor sets nothing but the instance's record of whether it is running
@@ -49,22 +49,7 @@ class Location {
 
             // Register handler for when agent asks for WiFi scan data
             agent.on("location.class.internal.getwlans", function(dummy) {
-                if ("info" in imp) {
-                    // We are on 36 or above, so we can use async scanning
-                    try {
-                        imp.scanwifinetworks(function(wlans) {
-                            _networks = wlans;
-                            agent.send("location.class.internal.setwlans", wlans);
-                        }.bindenv(this));
-                    } catch (err) {
-                        // Error indicates we're probably running another scan
-                        if (_debug) server.log("device.constructor: WiFi scan already in progress");
-                    }
-                } else {
-                    // We are on 34 or less, so use sync scanning
-                    _networks = imp.scanwifinetworks();
-                    agent.send("location.class.internal.setwlans", _networks);
-                }
+                _scan();
             }.bindenv(this));
 
             // Register handler for when agent sends location data to device
@@ -87,45 +72,13 @@ class Location {
             // Device first sends the WLAN scan data to the agent
             if (_debug) server.log("Getting WiFi data for the agent");
 
-            if (usePrevious) {
+            if (usePrevious && _networks != null) {
                 // User wants to use a previously collected list of WLANs
-                if (_networks != null) {
-                    // Send the existing list
-                    if (_debug) server.log("Sending WiFi data to agent");
-                    agent.send("location.class.internal.setwlans", _networks);
-                } else {
-                    // There is no existing list of WLANs, so get one now
-                    try {
-                        imp.scanwifinetworks(function(wlans) {
-                            // Scan operates asynchronously
-                            // Save provided WLAN list
-                            _networks = wlans;
-
-                            // Send the list to the agent
-                            if (_debug) server.log("Sending WiFi data to agent");
-                            agent.send("location.class.internal.setwlans", wlans);
-                        }.bindenv(this));
-                    } catch (err) {
-                        // Error indicates we're probably running another scan
-                        if (_debug) server.log("device.locate(): WiFi scan already in progress");
-                    }
-                }
+                if (_debug) server.log("Sending WiFi data to agent");
+                agent.send("location.class.internal.setwlans", _networks);
             } else {
-                // User wants to make a fresh WLAN scan
-                try {
-                    imp.scanwifinetworks(function(wlans) {
-                        // Scan operates asynchronously
-                        // Save provided WLAN list
-                        _networks = wlans;
-
-                        // Send the list to the agent
-                        if (_debug) server.log("Sending WiFi data to agent");
-                        agent.send("location.class.internal.setwlans", wlans);
-                    }.bindenv(this));
-                } catch (err) {
-                    // Probably running another scan
-                    if (_debug) server.log("device.locate(): WiFi scan already in progress");
-                }
+                // There is no existing list of WLANs, so get one now
+                _scan();
             }
         } else {
             // Agent asks the device for a WLAN scan
@@ -150,7 +103,7 @@ class Location {
 
     // ********** Private functions - DO NOT CALL **********
 
-    // AGENT functions
+    // ********** AGENT private functions **********
 
     function _addColons(bssid) {
         // Format a WLAN basestation MAC for transmission to Google
@@ -161,8 +114,7 @@ class Location {
         return result;
     }
 
-    function _loctateFromWLANs(networks = null)
-    {
+    function _loctateFromWLANs(networks = null) {
         // This is run *only* on an agent, to process WLAN scan data from the device
         // and send it to Google, which should return a location record
         if (_debug) server.log("There are " + networks.len() + " WLANs around device");
@@ -229,7 +181,7 @@ class Location {
     }
 
     function _handleError(error) {
-        // This is only run on the agent in response to an error condition signalled by Google
+        // This is run *only* on the agent in response to an error condition signalled by Google
         if (error.code == 400) {
             // We can't recover from these errors
             _locating = false;
@@ -257,11 +209,10 @@ class Location {
         }
     }
 
-    // DEVICE functions
+    // ********** DEVICE private functions **********
 
     function _setLocale(data) {
-        // This is run only on a device,
-        // in response to location data send by the agent
+        // This is run *only* on a device in response to location data send by the agent
         _lat = data.lat;
         _long = data.lng;
         _located = true;
@@ -270,5 +221,26 @@ class Location {
         // Call the 'device located' callback. This should only be
         // set if the location process was initiated by the device
         if (_locatedCallback != null) _locatedCallback();
+    }
+
+    function _scan() {
+        // This is run *only* on the device to scan for local WiFi networks
+        // If impOS 36 is available, we do this asynchronously
+        if ("info" in imp) {
+            // We are on impOS 36 or above, so we can use async scanning
+            try {
+                imp.scanwifinetworks(function(wlans) {
+                    _networks = wlans;
+                    agent.send("location.class.internal.setwlans", wlans);
+                }.bindenv(this));
+            } catch (err) {
+                // Error indicates we're probably running another scan
+                if (_debug) server.log("device.constructor: WiFi scan already in progress");
+            }
+        } else {
+            // We are on impOS 34 or less, so use sync scanning
+            _networks = imp.scanwifinetworks();
+            agent.send("location.class.internal.setwlans", _networks);
+        }
     }
 }
