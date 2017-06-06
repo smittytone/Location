@@ -1,4 +1,4 @@
-# Location 1.2.1
+# Location 1.2.2
 
 Location is a Squirrel class written to provide support for Google’s geolocation API on Electric Imp devices.
 
@@ -12,10 +12,9 @@ Google’s [geolocation API](https://developers.google.com/maps/documentation/ge
 
 Consider a weather station application. In this case, the agent needs to determine the device’s location in order to pass the co-ordinates to a third-party weather forecast API. The agent therefore initiates the process *when the device has signalled its readiness*:
 
-1. Device completes start-up and signals its readiness to its agent.
-1. Agent calls [the *locate()* function](#locateuseprevious-callback) which messages the device.
-2. Device gathers all nearby wireless networks and returns this to the agent.
-3. Agent sends network list to Google’s geolocation API.
+1. Device completes start-up and calls [the *locate()* function](#locateuseprevious-callback).
+2. Device gathers all nearby wireless networks and sends this to the agent.
+3. Agent relays network list to Google’s geolocation API.
 4. Google returns the determined latitude and longitude. This takes place asynchronously.
 5. Agent process the data returned by google.
 6. Agent stores the location locally and uses it to format the message to be sent to the weather forecast API.
@@ -68,6 +67,8 @@ Details of the limits Google applies can be found [here](https://developers.goog
 
 ## Release Notes
 
+- 1.2.2
+    - WiFi scan code refactoring to reduce library memory footprint.
 - 1.2.1
     - Small code tweaks; clarify that the API key is only needed by the agent constructor.
 - 1.2.0
