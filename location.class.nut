@@ -34,14 +34,15 @@ class Location {
             _isDevice = false;
 
             // Check for a value Google Geolocation API key
-            if (apiKey == null) {
-                throw "Location class requires a non-null API key. It cannot proceed without one";
+            if (apiKey == null || typeof apiKey != "string" || apiKey.len() == 0) {
+                throw "Location class requires a non-null API key as a string. It cannot proceed without one";
             } else {
                 _apiKey = apiKey;
             }
 
             // Register handler for when device sends WLAN scan data
             device.on("location.class.internal.setwlans", _loctateFromWLANs.bindenv(this));
+
             if (_debug) server.log("Location class instantiated on the agent");
         } else {
             // Code is running on a device
@@ -54,13 +55,14 @@ class Location {
 
             // Register handler for when agent sends location data to device
             agent.on("location.class.internal.setloc", _setLocale.bindenv(this));
+
             if (_debug) server.log("Location class instantiated on the device");
         }
     }
 
     function locate(usePrevious = true, callback = null) {
         // Triggers an attempt to locate the device. If a callback is passed,
-        // it will be called to when the location has been found
+        // it will be called if and when the location has been found
 
         // Already checking? Bail
         if (_locating) return;
@@ -68,7 +70,7 @@ class Location {
 
         if (callback != null) _locatedCallback = callback;
 
-        if (_isDevice == true) {
+        if (_isDevice) {
             // Device first sends the WLAN scan data to the agent
             if (_debug) server.log("Getting WiFi data for the agent");
 
@@ -82,8 +84,8 @@ class Location {
             }
         } else {
             // Agent asks the device for a WLAN scan
-            device.send("location.class.internal.getwlans", true);
             if (_debug) server.log("Requesting WiFi data from device");
+            device.send("location.class.internal.getwlans", true);
         }
     }
 
@@ -153,7 +155,17 @@ class Location {
         if (_debug) server.log("Processing data received from Google");
 
         _locating = false;
-        local data = http.jsondecode(response.body);
+        local data = null;
+
+        try {
+            data = http.jsondecode(response.body);
+        } catch (err) {
+            // Returned data not JSON?
+            if (_debug) server.log("Google returned garbled JSON. Will attempt to re-acquire location in 60s");
+            imp.wakeup(60, _loctateFromWLANs.bindenv(this));
+            return;
+        }
+
         if (response.statuscode == 200) {
             if ("location" in data) {
                 _lat = data.location.lat;
@@ -172,7 +184,7 @@ class Location {
         } else {
             if (_debug) server.log("Google sent error code: " + response.statuscode);
             if (response.statuscode > 499) {
-                if (_debug) server.log("Will attempt to acquire location in 60s");
+                if (_debug) server.log("Will attempt to re-acquire location in 60s");
                 imp.wakeup(60, _loctateFromWLANs.bindenv(this));
             } else {
                 if ("error" in data) _handleError(data.error);
@@ -213,8 +225,8 @@ class Location {
 
     function _setLocale(data) {
         // This is run *only* on a device in response to location data send by the agent
-        _lat = data.lat;
-        _long = data.lng;
+        if ("lat" in data) _lat = data.lat;
+        if ("lng" in data) _long = data.lng;
         _located = true;
         _locating = false;
 
@@ -231,15 +243,17 @@ class Location {
             try {
                 imp.scanwifinetworks(function(wlans) {
                     _networks = wlans;
+                    if (_debug) server.log("Sending WiFi data to agent");
                     agent.send("location.class.internal.setwlans", wlans);
                 }.bindenv(this));
             } catch (err) {
-                // Error indicates we're probably running another scan
-                if (_debug) server.log("device.constructor: WiFi scan already in progress");
+                // Error indicates we're most likely already running a scan
+                if (_debug) server.log("Warning: WiFi scan already in progress");
             }
         } else {
             // We are on impOS 34 or less, so use sync scanning
             _networks = imp.scanwifinetworks();
+            if (_debug) server.log("Sending WiFi data to agent");
             agent.send("location.class.internal.setwlans", _networks);
         }
     }
