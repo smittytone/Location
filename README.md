@@ -46,15 +46,15 @@ device.on("ready", function(dummy) {
     locator.locate(false, function() {
         // Code below called when location is determined (or an error generated)
         local locale = locator.getLocation();
-        if (!("err" in locale)) {
-            // No error, so extract the co-ordinates
-            server.log("Device location: " + locale.longitude + ", " + locale.latitude);
-
-            // Call the weather forecast service
-            getWeatherForecast(locale.longitude, locale.latitude);
-        } else {
+        if ("err" in locale) {
             // Report error
             server.error(locale.err);
+        } else {
+            // No error, so extract the co-ordinates...
+            server.log("Device location: " + locale.longitude + ", " + locale.latitude);
+
+            // ...and call the weather forecast service
+            getWeatherForecast(locale.longitude, locale.latitude);
         }
     });
 });
@@ -108,10 +108,10 @@ The *callback* parameter is optional &mdash; use it to call code when the device
 ```squirrel
 locator.locate(false, function() {
     locale = locator.getLocation();  // 'locale' is a global table variable
-    if (!("err" in locale)) {
-        server.log("Device location: " + locale.longitude + ", " + locale.latitude);
-    } else {
+    if ("err" in locale) {
         server.error(locale.err);
+    } else {
+        server.log("Device location: " + locale.longitude + ", " + locale.latitude);
     }
 });
 ```
@@ -124,10 +124,10 @@ The *getLocation()* function returns a table with *either* the keys *latitude* a
 
 ```squirrel
 locale = locator.getLocation();
-if (!("err" in locale)) {
-    server.log("Device location: " + locale.longitude + ", " + locale.latitude);
-} else {
+if ("err" in locale) {
     server.error(locale.err);
+} else {
+    server.log("Device location: " + locale.longitude + ", " + locale.latitude);
 }
 ```
 
