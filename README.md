@@ -1,4 +1,4 @@
-# Location 1.2.2
+# Location 1.2.3
 
 Location is a Squirrel class written to provide support for Google’s geolocation API on Electric Imp devices.
 
@@ -68,6 +68,8 @@ Details of the limits Google applies can be found [here](https://developers.goog
 
 ## Release Notes
 
+- 1.2.3
+    - Minor code changes; documentation improvements.
 - 1.2.2
     - WiFi scan code refactor to reduce library memory footprint.
 - 1.2.1
