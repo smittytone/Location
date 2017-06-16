@@ -8,22 +8,23 @@ class Location {
     //
     // Copyright Tony Smith, 2016-17
 
-    static VERSION = "1.2.3";
+    static VERSION = "1.3.0";
 
     _lat = 0;
     _long = 0;
+    _place = null;
     _located = false;
     _locatedTime = null;
     _locating = false;
     _isDevice = false;
     _locatedCallback = null;
     _networks = null;
-    _apiKey = null;
+    _geoLocateKey = null;
     _debug = false;
 
     // ********** Public functions **********
 
-    constructor(apiKey = null, debug = false) {
+    constructor(googleGeoLocationApiKey = null, debug = false) {
         // The constructor sets nothing but the instance's record of whether it is running
         // on an agent or a device, and then sets the appropriate internal callbacks
 
@@ -34,10 +35,12 @@ class Location {
             _isDevice = false;
 
             // Check for a value Google Geolocation API key
-            if (apiKey == null || typeof apiKey != "string" || apiKey.len() == 0) {
-                throw "Location class requires a non-null API key as a string. It cannot proceed without one";
+            if (googleGeoLocationApiKey == null ||
+                typeof googleGeoLocationApiKey != "string" ||
+                googleGeoLocationApiKey.len() == 0) {
+                throw "Location class requires a non-null Google GeoLocation API key as a string. It cannot proceed without one";
             } else {
-                _apiKey = apiKey;
+                _geoLocateKey = googleGeoLocationApiKey;
             }
 
             // Register handler for when device sends WLAN scan data
@@ -96,6 +99,7 @@ class Location {
         if (_located == true && _locating == false) {
             locale.longitude <- _long;
             locale.latitude <- _lat;
+            if (_place) locale.place <- _place;
         } else {
             if (!_located) locale.err <- "Device location not yet obtained or cannot be obtained";
             if (_locating) locale.err <- "Device location not yet obtained. Please try again shortly";
@@ -133,7 +137,7 @@ class Location {
             return;
         }
 
-        local url = "https://www.googleapis.com/geolocation/v1/geolocate?key=" + _apiKey;
+        local url = "https://www.googleapis.com/geolocation/v1/geolocate?key=" + _geoLocateKey;
         local header = {"Content-Type" : "application/json"};
         local body = {};
         body.wifiAccessPoints <- [];
@@ -173,9 +177,75 @@ class Location {
                 _located = true;
                 _locatedTime = time();
 
-                // Send the location data to the device
-                if (_debug) server.log("Sending location to device");
-                device.send("location.class.internal.setloc", data.location);
+                // Get the location
+                _getPlace();
+            }
+        } else {
+            if (_debug) server.log("Google sent error code: " + response.statuscode);
+            if (response.statuscode > 499) {
+                if (_debug) server.log("Will attempt to re-acquire location in 60s");
+                imp.wakeup(60, _loctateFromWLANs.bindenv(this));
+            } else {
+                if ("error" in data) _handleError(data.error);
+            }
+        }
+    }
+
+    function _getPlace() {
+        local url = format("https://maps.googleapis.com/maps/api/geocode/json?latlng=%f,%f&key=%s", _lat, _long, _geoLocateKey);
+        local request = http.get(url);
+        request.sendasync(_processPlace.bindenv(this));
+    }
+
+    function _processPlace(response) {
+        // This is run *only* on an agent, to process data returned by Google
+        if (_debug) server.log("Processing place data received from Google");
+
+        local data = null;
+
+        try {
+            data = http.jsondecode(response.body);
+        } catch (err) {
+            // Returned data not JSON?
+            if (_debug) server.log("Google returned garbled JSON. Will attempt to re-acquire location in 60s");
+            imp.wakeup(60, _getPlace.bindenv(this));
+            return;
+        }
+
+        if (response.statuscode == 200) {
+            local got = false;
+            if ("results" in data) {
+                // Iterate through the results table to find the neighbourhood
+                foreach (item in data.results) {
+                    foreach (k, v in item) {
+                        // We're looking for the 'types' array
+                        if (k == "types") {
+                            // Got it, so look through the elements for 'neighborhood'
+                            foreach (entry in v) {
+                                if (entry == "neighborhood") {
+                                    got = true;
+                                    _place = item.formatted_address;
+
+                                    // Send the location data to the device
+                                    local senddata = {};
+                                    senddata.lat <- _lat;
+                                    senddata.lng <- _long;
+                                    senddata.plc <- _place;
+                                    device.send("location.class.internal.setloc", senddata);
+                                    if (_debug) server.log("Sending location to device");
+
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (got) break;
+                    }
+
+                    if (got) break;
+                }
+
+                if (_place && _debug) server.log("Monitor located in " + _place);
 
                 // Call the 'device located' callback. This should only be
                 // set if the location process was initiated by the agent
@@ -185,7 +255,7 @@ class Location {
             if (_debug) server.log("Google sent error code: " + response.statuscode);
             if (response.statuscode > 499) {
                 if (_debug) server.log("Will attempt to re-acquire location in 60s");
-                imp.wakeup(60, _loctateFromWLANs.bindenv(this));
+                imp.wakeup(60, _getPlace.bindenv(this));
             } else {
                 if ("error" in data) _handleError(data.error);
             }
@@ -227,6 +297,7 @@ class Location {
         // This is run *only* on a device in response to location data send by the agent
         if ("lat" in data) _lat = data.lat;
         if ("lng" in data) _long = data.lng;
+        if ("plc" in data) _place = data.plc;
         _located = true;
         _locating = false;
 

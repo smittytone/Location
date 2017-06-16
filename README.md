@@ -1,10 +1,12 @@
-# Location 1.2.3
+# Location 1.3.0
 
 Location is a Squirrel class written to provide support for Google’s geolocation API on Electric Imp devices.
 
 It should be included and instantiated in **both** device code and agent code &mdash; use the same code for both. The two instances will communicate as required to locate the device based on nearby WiFi networks. This data is sent to Google by the agent instance, which returns the device’s latitude and longitude.
 
 Google’s [geolocation API](https://developers.google.com/maps/documentation/geolocation/intro) controls access through the use of an API key. You must obtain your own API key and pass it into the device and agent instances of the Location class at instantiation.
+
+**Note** Version 1.3.0 adds optional support for Google’s GeoCoding API.
 
 **Note** Version 1.2.0 adds support for impOS&trade; 36’s asynchronous version of *imp.scanwifinetworks()*. This version is compatible with earlier versions of impOS.
 
@@ -51,7 +53,8 @@ device.on("ready", function(dummy) {
             server.error(locale.err);
         } else {
             // No error, so extract the co-ordinates...
-            server.log("Device location: " + locale.longitude + ", " + locale.latitude);
+            server.log("Device co-ordinates: " + locale.longitude + ", " + locale.latitude);
+            server.log("Device location: " + locale.place);
 
             // ...and call the weather forecast service
             getWeatherForecast(locale.longitude, locale.latitude);
@@ -68,7 +71,8 @@ Details of the limits Google applies can be found [here](https://developers.goog
 
 ## Release Notes
 
-- 1.2.3
+- 1.3.0
+    - Add support for Google's GeoCoding API to optionally reverse geolocate based on co-ordinates.
     - Minor code changes; documentation improvements.
 - 1.2.2
     - WiFi scan code refactor to reduce library memory footprint.
@@ -87,6 +91,8 @@ Details of the limits Google applies can be found [here](https://developers.goog
 ### Location(*googleGeoLocationApiKey[, debugFlag]*)
 
 The constructor’s two parameters are your Google geolocation API key (mandatory on the agent instance; not required for the device instance) and an optional debugging flag. The latter defaults to `false` &mdash; progress reports will not be logged.
+
+The geolocation API key is required by the agent to locate the device by latitude and longitude. If you don’t provide a geolocation API key, the library will throw a warning.
 
 ### Example
 
@@ -113,14 +119,15 @@ locator.locate(false, function() {
     if ("err" in locale) {
         server.error(locale.err);
     } else {
-        server.log("Device location: " + locale.longitude + ", " + locale.latitude);
+        server.log("Device co-ordinates: " + locale.longitude + ", " + locale.latitude);
+        server.log("Device location: " + locale.place);
     }
 });
 ```
 
 ### getLocation()
 
-The *getLocation()* function returns a table with *either* the keys *latitude* and *longitude*, *or* the key *err*. The first two of these keys’ values will be the device’s co-ordinates as determined by the geolocation API. The *err* key is *only* present when an error has taken place, and so should be used as an error check.
+The *getLocation()* function returns a table with *either* the keys *latitude*, *longitude* and *place*, *or* the key *err*. The first two of these keys’ values will be the device’s co-ordinates as determined by the geolocation API. The *place* key’s value is a human-readable string giving the device’s locale. The *err* key is *only* present when an error has taken place, and so should be used as an error check.
 
 ### Example
 
@@ -129,7 +136,8 @@ locale = locator.getLocation();
 if ("err" in locale) {
     server.error(locale.err);
 } else {
-    server.log("Device location: " + locale.longitude + ", " + locale.latitude);
+    server.log("Device co-ordinates: " + locale.longitude + ", " + locale.latitude);
+    server.log("Device location: " + locale.place);
 }
 ```
 
