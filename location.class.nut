@@ -245,8 +245,6 @@ class Location {
                     if (got) break;
                 }
 
-                if (_place && _debug) server.log("Monitor located in " + _place);
-
                 // Call the 'device located' callback. This should only be
                 // set if the location process was initiated by the agent
                 if (_locatedCallback != null) _locatedCallback();
