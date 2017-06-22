@@ -10,9 +10,9 @@ class Location {
 
     static VERSION = "1.3.0";
 
-    _lat = 0;
-    _long = 0;
-    _place = null;
+    _latitude = 0;
+    _longitude = 0;
+    _placeData = null;
     _located = false;
     _locatedTime = null;
     _locating = false;
@@ -97,9 +97,9 @@ class Location {
         // or one key, err, if the instance has not yet got a location (or is getting it)
         local locale = {};
         if (_located == true && _locating == false) {
-            locale.longitude <- _long;
-            locale.latitude <- _lat;
-            if (_place) locale.place <- _place;
+            locale.longitude <- _longitude;
+            locale.latitude <- _latitude;
+            locale.placeData <- _placeData;
         } else {
             if (!_located) locale.err <- "Device location not yet obtained or cannot be obtained";
             if (_locating) locale.err <- "Device location not yet obtained. Please try again shortly";
@@ -172,8 +172,8 @@ class Location {
 
         if (response.statuscode == 200) {
             if ("location" in data) {
-                _lat = data.location.lat;
-                _long = data.location.lng;
+                _latitude = data.location.lat;
+                _longitude = data.location.lng;
                 _located = true;
                 _locatedTime = time();
 
@@ -192,8 +192,9 @@ class Location {
     }
 
     function _getPlace() {
-        local url = format("https://maps.googleapis.com/maps/api/geocode/json?latlng=%f,%f&key=%s", _lat, _long, _geoLocateKey);
+        local url = format("https://maps.googleapis.com/maps/api/geocode/json?latlng=%f,%f&key=%s", _latitude, _longitude, _geoLocateKey);
         local request = http.get(url);
+        if (_debug) server.log("Requesting location name from Google");
         request.sendasync(_processPlace.bindenv(this));
     }
 
@@ -213,42 +214,24 @@ class Location {
         }
 
         if (response.statuscode == 200) {
-            local got = false;
+            // The library stores the location data, it does not parse it -
+            // that is the job of the application because only the application knows
+            // what data it is looking for
+            local senddata = {};
+            senddata.latitude <- _latitude;
+            senddata.longitude <- _longitude;
+
             if ("results" in data) {
-                // Iterate through the results table to find the neighbourhood
-                foreach (item in data.results) {
-                    foreach (k, v in item) {
-                        // We're looking for the 'types' array
-                        if (k == "types") {
-                            // Got it, so look through the elements for 'neighborhood'
-                            foreach (entry in v) {
-                                if (entry == "neighborhood") {
-                                    got = true;
-                                    _place = item.formatted_address;
-
-                                    // Send the location data to the device
-                                    local senddata = {};
-                                    senddata.lat <- _lat;
-                                    senddata.lng <- _long;
-                                    senddata.plc <- _place;
-                                    device.send("location.class.internal.setloc", senddata);
-                                    if (_debug) server.log("Sending location to device");
-
-                                    break;
-                                }
-                            }
-                        }
-
-                        if (got) break;
-                    }
-
-                    if (got) break;
-                }
-
-                // Call the 'device located' callback. This should only be
-                // set if the location process was initiated by the agent
-                if (_locatedCallback != null) _locatedCallback();
+                _placeData = data.results;
+                senddata.placeData <- data.results;
             }
+
+            device.send("location.class.internal.setloc", senddata);
+            if (_debug) server.log("Sending location to device");
+
+            // Call the 'device located' callback. This should only be
+            // set if the location process was initiated by the agent
+            if (_locatedCallback != null) _locatedCallback();
         } else {
             if (_debug) server.log("Google sent error code: " + response.statuscode);
             if (response.statuscode > 499) {
@@ -293,9 +276,9 @@ class Location {
 
     function _setLocale(data) {
         // This is run *only* on a device in response to location data send by the agent
-        if ("lat" in data) _lat = data.lat;
-        if ("lng" in data) _long = data.lng;
-        if ("plc" in data) _place = data.plc;
+        if ("latitude" in data) _latitude = data.latitude;
+        if ("longitude" in data) _longitude = data.longitude;
+        if ("placeData" in data) _placeData = data.placeData;
         _located = true;
         _locating = false;
 
