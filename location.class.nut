@@ -67,7 +67,7 @@ class Location {
         // Triggers an attempt to locate the device. If a callback is passed,
         // it will be called if and when the location has been found
 
-        // Already checking? Bail
+        // Already checking for a location? If so, bail
         if (_locating) return;
         _locating = true;
 
@@ -75,20 +75,28 @@ class Location {
 
         if (_isDevice) {
             // Device first sends the WLAN scan data to the agent
-            if (_debug) server.log("Getting WiFi data for the agent");
-
             if (usePrevious && _networks != null) {
-                // User wants to use a previously collected list of WLANs
+                // User wants to use a previously collected list of WLANs;
+                // the device has one, so it just sends it back
                 if (_debug) server.log("Sending WiFi data to agent");
                 agent.send("location.class.internal.setwlans", _networks);
             } else {
-                // There is no existing list of WLANs, so get one now
+                // There is no existing list of WLANs, or a new one is required,
+                // so go and get one now
+                if (_debug) server.log("Getting WiFi data for the agent");
                 _scan();
             }
         } else {
-            // Agent asks the device for a WLAN scan
-            if (_debug) server.log("Requesting WiFi data from device");
-            device.send("location.class.internal.getwlans", true);
+            // Does the agent have a list of WLANs it can use?
+            // NOTE if 'usePrevious' is false, we get a WLAN list anyway
+            if (usePrevious && _networks != null) {
+                // Use the existing list of local WLANs
+                _loctateFromWLANs();
+            } else {
+                // Agent asks the device for a WLAN scan
+                if (_debug) server.log("Requesting WiFi data from device");
+                device.send("location.class.internal.getwlans", true);
+            }
         }
     }
 
