@@ -1,3 +1,7 @@
+const GEOLOCATION_URL = "https://www.googleapis.com/geolocation/v1/geolocate?key=";
+const GEOCODE_URL = "https://maps.googleapis.com/maps/api/geocode/json?";
+const TIMEZONE_URL = "https://maps.googleapis.com/maps/api/timezone/json?";
+
 class Location {
 
     // This class is designed to be run on both device *and* agent. It requires
@@ -16,8 +20,10 @@ class Location {
     _located = false;
     _locatedTime = null;
     _locating = false;
+    _timezoneDeviceFlag = false;
     _isDevice = false;
     _locatedCallback = null;
+    _timezoneCallback = null;
     _networks = null;
     _geoLocateKey = null;
     _debug = false;
@@ -38,13 +44,19 @@ class Location {
             if (googleGeoLocationApiKey == null ||
                 typeof googleGeoLocationApiKey != "string" ||
                 googleGeoLocationApiKey.len() == 0) {
-                throw "Location class requires a non-null Google GeoLocation API key as a string. It cannot proceed without one";
+                throw "Location class requires a non-null Google GeoLocation API key as a string";
             } else {
                 _geoLocateKey = googleGeoLocationApiKey;
             }
 
             // Register handler for when device sends WLAN scan data
             device.on("location.class.internal.setwlans", _loctateFromWLANs.bindenv(this));
+
+            // Register handler for when device requests timezone data
+            device.on("location.class.internal.gettimezone", function(value) {
+                _timezoneDeviceFlag = value;
+                getTimezone();
+            }.bindenv(this));
 
             if (_debug) server.log("Location class instantiated on the agent");
         } else {
@@ -58,6 +70,15 @@ class Location {
 
             // Register handler for when agent sends location data to device
             agent.on("location.class.internal.setloc", _setLocale.bindenv(this));
+
+            // Register handler for when agent returns timezone data
+            agent.on("location.class.internal.settimezone", function(timezoneData) {
+                if ("error" in timezoneData) {
+                    _timezoneCallback(timezoneData.err, null);
+                } else {
+                    _timezoneCallback(null, timezoneData.data);
+                }
+            }.bindenv(this));
 
             if (_debug) server.log("Location class instantiated on the device");
         }
@@ -115,6 +136,23 @@ class Location {
         return locale;
     }
 
+    function getTimezone(callback = null) {
+        if (callback == null) {
+            throw "getTimezone() requires a non-null callback";
+        }
+
+        _timezoneCallback = callback;
+
+        if (_isDevice) {
+            agent.send("location.class.internal.gettimezone", true);
+            return;
+        }
+
+        local url = format("%slocation=%f,%f&timestamp=%d&key=%s", TIMEZONE_URL, _latitude, _longitude, time(), _geoLocateKey);
+        local request = http.get(url, {});
+        request.sendasync(_processTimezone.bindenv(this));
+    }
+
     // ********** Private functions - DO NOT CALL **********
 
     // ********** AGENT private functions **********
@@ -145,7 +183,7 @@ class Location {
             return;
         }
 
-        local url = "https://www.googleapis.com/geolocation/v1/geolocate?key=" + _geoLocateKey;
+        local url = GEOLOCATION_URL + _geoLocateKey;
         local header = {"Content-Type" : "application/json"};
         local body = {};
         body.wifiAccessPoints <- [];
@@ -200,7 +238,7 @@ class Location {
     }
 
     function _getPlace() {
-        local url = format("https://maps.googleapis.com/maps/api/geocode/json?latlng=%f,%f&key=%s", _latitude, _longitude, _geoLocateKey);
+        local url = format("%slatlng=%f,%f&key=%s", GEOCODE_URL, _latitude, _longitude, _geoLocateKey);
         local request = http.get(url);
         if (_debug) server.log("Requesting location name from Google");
         request.sendasync(_processPlace.bindenv(this));
@@ -247,6 +285,61 @@ class Location {
                 imp.wakeup(60, _getPlace.bindenv(this));
             } else {
                 if ("error" in data) _handleError(data.error);
+            }
+        }
+    }
+
+    function _processTimezone(response) {
+        local data = null;
+        local err = null;
+
+        try {
+            // Make sure the returned JSON can be decoded
+            data = http.jsondecode(response.body);
+        } catch(err) {
+            if (_timezoneDeviceFlag) {
+                // The call to determine the timezone was made on the device, so
+                // return the error to the device
+                device.send("location.class.internal.settimezone", {"error" : err});
+            } else {
+                _timezoneCallback(err, null);
+            }
+
+            return;
+        }
+
+        if ("status" in data) {
+            if (data.status == "OK") {
+                // Success
+                local returnData = {};
+                local t = time() + data.rawOffset + data.dstOffset;
+                local d = date(t);
+                returnData.time <- t;
+                returnData.date <- d;
+                returnData.dateStr <- format("%04d-%02d-%02d %02d:%02d:%02d", d.year, d.month+1, d.day, d.hour, d.min, d.sec)
+                returnData.gmtOffset <- data.rawOffset + data.dstOffset;
+                returnData.gmtOffsetStr <- format("GMT%s%d", returnData.gmtOffset < 0 ? "-" : "+", math.abs(returnData.gmtOffset / 3600));
+                data = returnData;
+            } else {
+                if ("errorMessage" in data) {
+                    err = data.status + ": " + data.errorMessage;
+                } else {
+                    err = data.status;
+                }
+            }
+        } else {
+            err = response.statuscode + ": " + GOOGLE_REQ_ERROR;
+        }
+
+        if (_timezoneDeviceFlag) {
+            // The call to determine the timezone was made on the device, so
+            // return the data to the device
+            device.send("location.class.internal.settimezone", { "error" : err, "data" : data });
+        } else {
+            if (err != null) {
+                _timezoneCallback(err, null);
+            } else {
+                _timezoneCallback(null, data);
             }
         }
     }
