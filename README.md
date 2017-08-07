@@ -1,10 +1,12 @@
-# Location 1.3.0
+# Location 1.4.0
 
 Location is a Squirrel class written to provide support for Google’s geolocation API on Electric Imp devices.
 
 It should be included and instantiated in **both** device code and agent code &mdash; use the same code for both. The two instances will communicate as required to locate the device based on nearby WiFi networks. This data is sent to Google by the agent instance, which returns the device’s latitude and longitude.
 
-Google’s [geolocation API](https://developers.google.com/maps/documentation/geolocation/intro) controls access through the use of an API key. You must obtain your own API key and pass it into the device and agent instances of the Location class at instantiation.
+Google’s [geolocation API](https://developers.google.com/maps/documentation/geolocation/intro) controls access through the use of an API key. You must obtain your own API key and pass it into the device and agent instances of the Location class at instantiation. You will need to enabled these APIs in the [developer console](https://console.developers.google.com/apis).
+
+**Note** Version 1.4.0 adds optional support for Google’s Timezone API.
 
 **Note** Version 1.3.0 adds optional support for Google’s GeoCoding API.
 
@@ -71,6 +73,8 @@ Details of the limits Google applies can be found [here](https://developers.goog
 
 ## Release Notes
 
+- 1.4.0
+    - Add support for Google's Timezone API to optionally determine the timezone in which the device is found.
 - 1.3.0
     - Add support for Google's GeoCoding API to optionally reverse geolocate based on co-ordinates.
     - Minor code changes; documentation improvements.

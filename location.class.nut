@@ -12,7 +12,7 @@ class Location {
     //
     // Copyright Tony Smith, 2016-17
 
-    static VERSION = "1.3.0";
+    static VERSION = "1.4.0";
 
     _latitude = 0;
     _longitude = 0;
@@ -33,7 +33,6 @@ class Location {
     constructor(googleGeoLocationApiKey = null, debug = false) {
         // The constructor sets nothing but the instance's record of whether it is running
         // on an agent or a device, and then sets the appropriate internal callbacks
-
         if (typeof debug == "bool") _debug = debug;
 
         if (imp.environment() == 2) {
@@ -137,17 +136,16 @@ class Location {
     }
 
     function getTimezone(callback = null) {
-        if (callback == null) {
-            throw "getTimezone() requires a non-null callback";
-        }
-
+        if (callback == null) throw "Location.getTimezone() requires a non-null callback";
         _timezoneCallback = callback;
 
         if (_isDevice) {
+            // If we're calling this on a device, just ping the agent to do the work
             agent.send("location.class.internal.gettimezone", true);
             return;
         }
 
+        // If we're here, we're operating on an agent (either direct or via a device ping)
         local url = format("%slocation=%f,%f&timestamp=%d&key=%s", TIMEZONE_URL, _latitude, _longitude, time(), _geoLocateKey);
         local request = http.get(url, {});
         request.sendasync(_processTimezone.bindenv(this));
