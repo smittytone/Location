@@ -319,6 +319,7 @@ class Location {
         if (_debug) server.log("Processing timezone data from Google");
         local data = null;
         local err = null;
+        _timezoning = false;
 
         try {
             // Make sure the returned JSON can be decoded
@@ -343,7 +344,7 @@ class Location {
                 local d = date(t);
                 returnData.time <- t;
                 returnData.date <- d;
-                returnData.dateStr <- format("%04d-%02d-%02d %02d:%02d:%02d", d.year, d.month+1, d.day, d.hour, d.min, d.sec)
+                returnData.dateStr <- format("%04d-%02d-%02d %02d:%02d:%02d", d.year, d.month+1, d.day, d.hour, d.min, d.sec);
                 returnData.gmtOffset <- data.rawOffset + data.dstOffset;
                 returnData.gmtOffsetStr <- format("GMT%s%d", returnData.gmtOffset < 0 ? "-" : "+", math.abs(returnData.gmtOffset / 3600));
                 data = returnData;
@@ -361,6 +362,7 @@ class Location {
         if (_timezoneDeviceFlag) {
             // The call to determine the timezone was made on the device
             device.send("location.class.internal.settimezone", { "error" : err });
+            _timezoneDeviceFlag = false;
         } else {
             if (err != null) {
                 _timezoneCallback(err, null);
