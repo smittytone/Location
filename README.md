@@ -6,10 +6,6 @@ It should be included and instantiated in **both** device code and agent code &m
 
 Google’s [geolocation API](https://developers.google.com/maps/documentation/geolocation/intro) controls access through the use of an API key. You must obtain your own API key and pass it into the device and agent instances of the Location class at instantiation. You will need to enabled these APIs in the [developer console](https://console.developers.google.com/apis).
 
-**Note** Version 1.4.0 adds optional support for Google’s Timezone API.
-
-**Note** Version 1.3.0 adds optional support for Google’s GeoCoding API.
-
 **Note** Version 1.2.0 adds support for impOS&trade; 36’s asynchronous version of *imp.scanwifinetworks()*. This version is compatible with earlier versions of impOS.
 
 ### Typical Flow
