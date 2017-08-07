@@ -12,21 +12,22 @@ class Location {
     //
     // Copyright Tony Smith, 2016-17
 
-    static VERSION = "1.4.0";
+    static VERSION = "2.0.0";
 
     _latitude = 0;
     _longitude = 0;
     _placeData = null;
-    _located = false;
-    _locatedTime = null;
-    _locating = false;
-    _timezoning = false;
-    _timezoneDeviceFlag = false;
-    _isDevice = false;
+    _timezoneData = null;
     _locatedCallback = null;
     _timezoneCallback = null;
     _networks = null;
     _geoLocateKey = null;
+    _locatedTime = null;
+    _located = false;
+    _locating = false;
+    _timezoning = false;
+    _timezoneDeviceFlag = false;
+    _isDevice = false;
     _debug = false;
 
     // ********** Public functions **********
@@ -73,9 +74,10 @@ class Location {
             // Register handler for when agent returns timezone data
             agent.on("location.class.internal.settimezone", function(timezoneData) {
                 if ("error" in timezoneData) {
-                    _timezoneCallback(timezoneData.err, null);
+                    _timezoneCallback(timezoneData.error, null);
                 } else {
                     _timezoneCallback(null, timezoneData.data);
+                    _timezoneData = timezoneData.data;
                 }
             }.bindenv(this));
 
@@ -127,8 +129,8 @@ class Location {
     }
 
     function getLocation() {
-        // Returns the location as a table with two keys, longitude and latitude
-        // or one key, err, if the instance has not yet got a location (or is getting it)
+        // Returns the location as a table with three keys, 'longitude', 'latitude' and 'placeData',
+        // or one key, 'error', if the instance has not yet got a location (or is getting it)
         local location = {};
         
         if (_located && !_locating) {
@@ -136,28 +138,28 @@ class Location {
             location.latitude <- _latitude;
             location.placeData <- _placeData;
         } else {
-            if (!_located) location.err <- "Device location not yet obtained or cannot be obtained";
-            if (_locating) location.err <- "Device location not yet obtained. Please try again shortly";
+            if (!_located) location.error <- "Device location not yet obtained or cannot be obtained";
+            if (_locating) location.error <- "Device location not yet obtained. Please try again shortly";
         }
         
         return location;
     }
     
     function getTimezone() {
-        // Returns the timezone information
+        // Returns the timezone information as a table with two possible keys: 'data' or 'error'
         local timezone = {};
         
-        if (_timezone != null && !_timezoning) {
-            timezone.data <- _timezone;
+        if (_timezoneData != null && !_timezoning) {
+            timezone.data <- _timezoneData;
         } else {
-            if (_timezone == null) timezone.err <- "Device timezone not yet obtained or cannot be obtained";
-            if (_timezoning) timezone.err <- "Device timezone not yet obtained. Please try again shortly";
+            if (_timezone == null) timezone.error <- "Device timezone not yet obtained or cannot be obtained";
+            if (_timezoning) timezone.error <- "Device timezone not yet obtained. Please try again shortly";
         }
         
         return timezone;
     }
     
-    // ********** Private functions - DO NOT CALL **********
+    // ********** Private functions - DO NOT CALL DIRECTLY **********
 
     // ********** AGENT private functions **********
 
@@ -207,7 +209,7 @@ class Location {
 
     function _processLocation(response) {
         // This is run *only* on an agent, to process data returned by Google
-        if (_debug) server.log("Processing data received from Google");
+        if (_debug) server.log("Processing location data received from Google");
 
         _locating = false;
         local data = null;
@@ -249,14 +251,13 @@ class Location {
     function _getPlace() {
         local url = format("%slatlng=%f,%f&key=%s", GEOCODE_URL, _latitude, _longitude, _geoLocateKey);
         local request = http.get(url);
-        if (_debug) server.log("Requesting location name from Google");
+        if (_debug) server.log("Requesting place data from Google");
         request.sendasync(_processPlace.bindenv(this));
     }
 
     function _processPlace(response) {
         // This is run *only* on an agent, to process data returned by Google
         if (_debug) server.log("Processing place data received from Google");
-
         local data = null;
 
         try {
@@ -309,11 +310,13 @@ class Location {
         // If we're here, we're operating on an agent (either direct or via a device ping)
         local url = format("%slocation=%f,%f&timestamp=%d&key=%s", TIMEZONE_URL, _latitude, _longitude, time(), _geoLocateKey);
         local request = http.get(url, {});
+        if (_debug) server.log("Requesting timezone data from Google");
         request.sendasync(_processTimezone.bindenv(this));
     }
 
     function _processTimezone(response) {
-        // Process the data returned by Googler
+        // Process the data returned by Google
+        if (_debug) server.log("Processing timezone data from Google");
         local data = null;
         local err = null;
 
@@ -357,7 +360,7 @@ class Location {
 
         if (_timezoneDeviceFlag) {
             // The call to determine the timezone was made on the device
-            device.send("location.class.internal.settimezone", { "error" : err, "data" : data });
+            device.send("location.class.internal.settimezone", { "error" : err });
         } else {
             if (err != null) {
                 _timezoneCallback(err, null);
