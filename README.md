@@ -70,7 +70,7 @@ Details of the limits Google applies can be found [here](https://developers.goog
 ## Release Notes
 
 - 1.4.0
-    - Add support for Google's Timezone API to optionally determine the timezone in which the device is found.
+    - Add support for Google's Timezone API to determine the timezone in which the device is found.
 - 1.3.0
     - Add support for Google's GeoCoding API to optionally reverse geolocate based on co-ordinates.
     - Minor code changes; documentation improvements.

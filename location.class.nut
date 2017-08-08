@@ -12,19 +12,19 @@ class Location {
     //
     // Copyright Tony Smith, 2016-17
 
-    static VERSION = "2.0.0";
+    static VERSION = "1.4.0";
 
     _latitude = 0;
     _longitude = 0;
     _placeData = null;
     _timezoneData = null;
     _locatedCallback = null;
-    _timezoneCallback = null;
-    _networks = null;
     _geoLocateKey = null;
     _locatedTime = null;
+    _networks = null;
     _located = false;
     _locating = false;
+    _timezoning = false;
     _timezoneDeviceFlag = false;
     _isDevice = false;
     _debug = false;
@@ -50,7 +50,7 @@ class Location {
             }
 
             // Register handler for when device sends WLAN scan data
-            device.on("location.class.internal.setwlans", _loctateFromWLANs.bindenv(this));
+            device.on("location.class.internal.setwlans", _locateFromWLANs.bindenv(this));
 
             // Register handler for when device requests timezone data
             device.on("location.class.internal.gettimezone", function(value) {
@@ -113,7 +113,7 @@ class Location {
             // NOTE if 'usePrevious' is false, we get a WLAN list anyway
             if (usePrevious && _networks != null) {
                 // Use the existing list of local WLANs
-                _loctateFromWLANs();
+                _locateFromWLANs();
             } else {
                 // Agent asks the device for a WLAN scan
                 if (_debug) server.log("Requesting WiFi data from device");
@@ -144,16 +144,13 @@ class Location {
         local timezone = {};
 
         if (_timezoneData != null && !_timezoning) {
-            timezone.data <- _timezoneData;
+            timezone = _timezoneData;
         } else {
             if (_timezone == null) timezone.error <- "Device timezone not yet obtained or cannot be obtained";
             if (_timezoning) timezone.error <- "Device timezone not yet obtained. Please try again shortly";
         }
 
-        // If we're here, we're operating on an agent (either direct or via a device ping)
-        local url = format("%slocation=%f,%f&timestamp=%d&key=%s", TIMEZONE_URL, _latitude, _longitude, time(), _geoLocateKey);
-        local request = http.get(url, {});
-        request.sendasync(_processTimezone.bindenv(this));
+        return timezone;
     }
 
     // ********** Private functions - DO NOT CALL DIRECTLY **********
@@ -169,7 +166,7 @@ class Location {
         return result;
     }
 
-    function _loctateFromWLANs(networks = null) {
+    function _locateFromWLANs(networks = null) {
         // This is run *only* on an agent, to process WLAN scan data from the device
         // and send it to Google, which should return a location record
         if (_debug) server.log("There are " + networks.len() + " WLANs around device");
@@ -180,7 +177,7 @@ class Location {
             // If we have no nearby WLANs and no saved list from a previous scan,
             // we can't proceed, so we need to warn the user. Note this will be reported
             // to the host app when 'getLocation()' is called
-            server.error("Location can find no nearby networks from which the device's location can be determined.");
+            server.error("There are no nearby networks from which the device's location can be determined.");
             _located = false;
             _locating = false;
             return;
@@ -198,16 +195,14 @@ class Location {
         }
 
         // Send the WLAN data
-        if (_debug) server.log("Requesting location from Google");
+        if (_debug) server.log("Requesting location co-ordinate data from Google");
         local request = http.post(url, header, http.jsonencode(body));
         request.sendasync(_processLocation.bindenv(this));
     }
 
     function _processLocation(response) {
         // This is run *only* on an agent, to process data returned by Google
-        if (_debug) server.log("Processing location data received from Google");
-
-        _locating = false;
+        if (_debug) server.log("Processing location co-ordinate data received from Google");
         local data = null;
 
         try {
@@ -215,7 +210,7 @@ class Location {
         } catch (err) {
             // Returned data not JSON?
             if (_debug) server.log("Google returned garbled JSON. Will attempt to re-acquire location in 60s");
-            imp.wakeup(60, _loctateFromWLANs.bindenv(this));
+            imp.wakeup(60, _locateFromWLANs.bindenv(this));
             return;
         }
 
@@ -233,7 +228,7 @@ class Location {
             if (_debug) server.log("Google sent error code: " + response.statuscode);
             if (response.statuscode > 499) {
                 if (_debug) server.log("Will attempt to re-acquire location in 60s");
-                imp.wakeup(60, _loctateFromWLANs.bindenv(this));
+                imp.wakeup(60, _locateFromWLANs.bindenv(this));
             } else {
                 if ("error" in data) _handleError(data.error);
             }
@@ -243,16 +238,17 @@ class Location {
     function _getPlace() {
         local url = format("%slatlng=%f,%f&key=%s", GEOCODE_URL, _latitude, _longitude, _geoLocateKey);
         local request = http.get(url);
-        if (_debug) server.log("Requesting place data from Google");
+        if (_debug) server.log("Requesting location name data from Google");
         request.sendasync(_processPlace.bindenv(this));
     }
 
     function _processPlace(response) {
         // This is run *only* on an agent, to process data returned by Google
-        if (_debug) server.log("Processing place data received from Google");
+        if (_debug) server.log("Processing location name data received from Google");
         local data = null;
 
         try {
+            // Make sure the returned JSON can be decoded
             data = http.jsondecode(response.body);
         } catch (err) {
             // Returned data not JSON?
@@ -262,9 +258,9 @@ class Location {
         }
 
         if (response.statuscode == 200) {
-            // The library stores the location data, it does not parse it -
-            // that is the job of the application because only the application knows
-            // what data it is looking for
+            // The library stores the location data, it does not parse it
+            _locating = false;
+
             local senddata = {};
             senddata.latitude <- _latitude;
             senddata.longitude <- _longitude;
@@ -274,12 +270,13 @@ class Location {
                 senddata.placeData <- data.results;
             }
 
+            // Send location data to the device
             device.send("location.class.internal.setloc", senddata);
             if (_debug) server.log("Sending location to device");
 
-            // Call the 'device located' callback. This should only be
-            // set if the location process was initiated by the agent
-            if (_locatedCallback != null) _locatedCallback();
+            // Get the timezone
+            _timezoning = true;
+            _getTimezone();
         } else {
             if (_debug) server.log("Google sent error code: " + response.statuscode);
             if (response.statuscode > 499) {
@@ -293,73 +290,54 @@ class Location {
 
     function _getTimezone() {
         // Determine the timezone at the device's location. For this we must have a location
-        if (_isDevice) {
-            // If we're calling this on a device, just ping the agent to do the work
-            agent.send("location.class.internal.gettimezone", true);
-            return;
-        }
-
-        // If we're here, we're operating on an agent (either direct or via a device ping)
         local url = format("%slocation=%f,%f&timestamp=%d&key=%s", TIMEZONE_URL, _latitude, _longitude, time(), _geoLocateKey);
         local request = http.get(url, {});
-        if (_debug) server.log("Requesting timezone data from Google");
+        if (_debug) server.log("Requesting location timezone data from Google");
         request.sendasync(_processTimezone.bindenv(this));
     }
 
     function _processTimezone(response) {
         // Process the data returned by Google
-        if (_debug) server.log("Processing timezone data from Google");
+        if (_debug) server.log("Processing location timezone data received from Google");
         local data = null;
         local err = null;
-        _timezoning = false;
 
         try {
             // Make sure the returned JSON can be decoded
             data = http.jsondecode(response.body);
         } catch(err) {
-            if (_timezoneDeviceFlag) {
-                // The call to determine the timezone was made on the device, so
-                // return the error to the device
-                device.send("location.class.internal.settimezone", {"error" : err});
-            } else {
-                _timezoneCallback(err, null);
-            }
-
+            // Returned data not JSON?
+            if (_debug) server.log("Google returned garbled JSON. Will attempt to re-acquire timezone in 60s");
+            imp.wakeup(60, _getTimezone.bindenv(this));
             return;
         }
 
-        if ("status" in data) {
-            if (data.status == "OK") {
-                // Success
-                local returnData = {};
-                local t = time() + data.rawOffset + data.dstOffset;
-                local d = date(t);
-                returnData.time <- t;
-                returnData.date <- d;
-                returnData.dateStr <- format("%04d-%02d-%02d %02d:%02d:%02d", d.year, d.month+1, d.day, d.hour, d.min, d.sec);
-                returnData.gmtOffset <- data.rawOffset + data.dstOffset;
-                returnData.gmtOffsetStr <- format("GMT%s%d", returnData.gmtOffset < 0 ? "-" : "+", math.abs(returnData.gmtOffset / 3600));
-                data = returnData;
-            } else {
-                if ("errorMessage" in data) {
-                    err = data.status + ": " + data.errorMessage;
-                } else {
-                    err = data.status;
+        _timezoning = false;
+        _timezoneData = {};
+        if (response.statuscode == 200) {
+            if ("status" in data) {
+                if (data.status == "OK") {
+                    // Success
+                    local t = time() + data.rawOffset + data.dstOffset;
+                    local d = date(t);
+                    _timezoneData.time <- t;
+                    _timezoneData.date <- d;
+                    _timezoneData.dateStr <- format("%04d-%02d-%02d %02d:%02d:%02d", d.year, d.month+1, d.day, d.hour, d.min, d.sec);
+                    _timezoneData.gmtOffset <- data.rawOffset + data.dstOffset;
+                    _timezoneData.gmtOffsetStr <- format("GMT%s%d", _timezoneData.gmtOffset < 0 ? "-" : "+", math.abs(_timezoneData.gmtOffset / 3600));
                 }
-            }
-        } else {
-            err = response.statuscode + ": " + GOOGLE_REQ_ERROR;
-        }
-
-        if (_timezoneDeviceFlag) {
-            // The call to determine the timezone was made on the device
-            device.send("location.class.internal.settimezone", { "error" : err });
-            _timezoneDeviceFlag = false;
-        } else {
-            if (err != null) {
-                _timezoneCallback(err, null);
             } else {
-                _timezoneCallback(null, data);
+                server.log("Bad status");
+            }
+
+            _locatedCallback();
+        } else {
+            if (_debug) server.log("Google sent error code: " + response.statuscode);
+            if (response.statuscode > 499) {
+                if (_debug) server.log("Will attempt to re-acquire timezone in 60s");
+                imp.wakeup(60, _getTimezone.bindenv(this));
+            } else {
+                if ("error" in data) _handleError(data.error);
             }
         }
     }
@@ -382,15 +360,18 @@ class Location {
             if (error.errors[0].reason == "userRateLimitExceeded") {
                 // Too many requests issued too quickly - try again in 10s
                 server.log(error.message + " - trying again in 10s");
-                imp.wakeup(10, _loctateFromWLANs.bindenv(this));
+                imp.wakeup(10, _locateFromWLANs.bindenv(this));
             } else if (error.errors[0].reason == "dailyLimitExceeded") {
                 // Too many requests issued today - try again after midnight
                 if (_debug) server.log(error.message + " - trying again tomorrow");
                 local now = date();
                 local delay = (24 - now.hour) * 3600;
-                imp.wakeup(delay, _loctateFromWLANs.bindenv(this));
+                imp.wakeup(delay, _locateFromWLANs.bindenv(this));
             }
         }
+
+
+
     }
 
     // ********** DEVICE private functions **********
