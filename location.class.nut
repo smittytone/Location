@@ -27,7 +27,6 @@ class Location {
     _located = false;
     _locating = false;
     _timezoning = false;
-    _timezoneDeviceFlag = false;
     _isDevice = false;
     _debug = false;
 
@@ -65,7 +64,7 @@ class Location {
             }.bindenv(this));
 
             // Register handler for when agent sends location data to device
-                            agent.on("location.class.internal.setloc", _setLocale.bindenv(this));
+            agent.on("location.class.internal.setloc", _setLocale.bindenv(this));
 
             if (_debug) server.log("Location class instantiated on the device");
         }
