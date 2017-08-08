@@ -25,7 +25,6 @@ class Location {
     _locatedTime = null;
     _located = false;
     _locating = false;
-    _timezoning = false;
     _timezoneDeviceFlag = false;
     _isDevice = false;
     _debug = false;
@@ -56,6 +55,7 @@ class Location {
             // Register handler for when device requests timezone data
             device.on("location.class.internal.gettimezone", function(value) {
                 _timezoneDeviceFlag = value;
+                getTimezone();
             }.bindenv(this));
 
             if (_debug) server.log("Location class instantiated on the agent");
@@ -85,21 +85,16 @@ class Location {
         }
     }
 
-    function locate(usePrevious = true, locateCallback = null, timezoneCallback = null) {
-        // Triggers an attempt to locate the device. If either callback is passed,
-        // it will be called if and when the location and/or timezone have been found
-        if (locateCallback != null && typeof locateCallback == "function") {
-            _locatedCallback = locateCallback;
-            if (_locating) return;
-            _locating = true;
-        }
+    function locate(usePrevious = true, callback = null) {
+        // Triggers an attempt to locate the device. If a callback is passed,
+        // it will be called if and when the location has been found
 
-        if (timezoneCallback != null && typeof timezoneCallback == "function") {
-            _timezoneCallback = timezoneCallback;
-            if (_timezoning) return;
-            _timezoning = true;
-        }
-        
+        // Already checking for a location? If so, bail
+        if (_locating) return;
+        _locating = true;
+
+        if (callback != null) _locatedCallback = callback;
+
         if (_isDevice) {
             // Device first sends the WLAN scan data to the agent
             if (usePrevious && _networks != null) {
@@ -108,12 +103,11 @@ class Location {
                 if (_debug) server.log("Sending WiFi data to agent");
                 agent.send("location.class.internal.setwlans", _networks);
             } else {
-                // There is no existing list of WLANs, or a new one is required
+                // There is no existing list of WLANs, or a new one is required,
+                // so go and get one now
                 if (_debug) server.log("Getting WiFi data for the agent");
                 _scan();
             }
-            
-            if (_timezoning) agent.send("location.class.internal.gettimezone", true);
         } else {
             // Does the agent have a list of WLANs it can use?
             // NOTE if 'usePrevious' is false, we get a WLAN list anyway
@@ -132,7 +126,7 @@ class Location {
         // Returns the location as a table with three keys, 'longitude', 'latitude' and 'placeData',
         // or one key, 'error', if the instance has not yet got a location (or is getting it)
         local location = {};
-        
+
         if (_located && !_locating) {
             location.longitude <- _longitude;
             location.latitude <- _latitude;
@@ -141,24 +135,27 @@ class Location {
             if (!_located) location.error <- "Device location not yet obtained or cannot be obtained";
             if (_locating) location.error <- "Device location not yet obtained. Please try again shortly";
         }
-        
+
         return location;
     }
-    
+
     function getTimezone() {
         // Returns the timezone information as a table with two possible keys: 'data' or 'error'
         local timezone = {};
-        
+
         if (_timezoneData != null && !_timezoning) {
             timezone.data <- _timezoneData;
         } else {
             if (_timezone == null) timezone.error <- "Device timezone not yet obtained or cannot be obtained";
             if (_timezoning) timezone.error <- "Device timezone not yet obtained. Please try again shortly";
         }
-        
-        return timezone;
+
+        // If we're here, we're operating on an agent (either direct or via a device ping)
+        local url = format("%slocation=%f,%f&timestamp=%d&key=%s", TIMEZONE_URL, _latitude, _longitude, time(), _geoLocateKey);
+        local request = http.get(url, {});
+        request.sendasync(_processTimezone.bindenv(this));
     }
-    
+
     // ********** Private functions - DO NOT CALL DIRECTLY **********
 
     // ********** AGENT private functions **********
@@ -183,10 +180,9 @@ class Location {
             // If we have no nearby WLANs and no saved list from a previous scan,
             // we can't proceed, so we need to warn the user. Note this will be reported
             // to the host app when 'getLocation()' is called
-            if (_debug) server.log("Location can find no nearby networks from which the device's location can be determined.");
+            server.error("Location can find no nearby networks from which the device's location can be determined.");
             _located = false;
             _locating = false;
-            _timezoning = false;
             return;
         }
 
@@ -215,7 +211,6 @@ class Location {
         local data = null;
 
         try {
-            // Check that the returned data is JSON that can be decoded
             data = http.jsondecode(response.body);
         } catch (err) {
             // Returned data not JSON?
@@ -233,9 +228,6 @@ class Location {
 
                 // Get the location
                 _getPlace();
-                
-                // Get the timezone if it has been requested
-                if (_timezoning) _getTimezone();
             }
         } else {
             if (_debug) server.log("Google sent error code: " + response.statuscode);
