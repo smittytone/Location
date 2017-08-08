@@ -13,7 +13,9 @@ class Location {
     // Copyright Tony Smith, 2016-17
 
     static VERSION = "1.4.0";
-
+    
+    // Private properties
+    
     _latitude = 0;
     _longitude = 0;
     _placeData = null;
@@ -52,12 +54,6 @@ class Location {
             // Register handler for when device sends WLAN scan data
             device.on("location.class.internal.setwlans", _locateFromWLANs.bindenv(this));
 
-            // Register handler for when device requests timezone data
-            device.on("location.class.internal.gettimezone", function(value) {
-                _timezoneDeviceFlag = value;
-                getTimezone();
-            }.bindenv(this));
-
             if (_debug) server.log("Location class instantiated on the agent");
         } else {
             // Code is running on a device
@@ -69,17 +65,7 @@ class Location {
             }.bindenv(this));
 
             // Register handler for when agent sends location data to device
-            agent.on("location.class.internal.setloc", _setLocale.bindenv(this));
-
-            // Register handler for when agent returns timezone data
-            agent.on("location.class.internal.settimezone", function(timezoneData) {
-                if ("error" in timezoneData) {
-                    _timezoneCallback(timezoneData.error, null);
-                } else {
-                    _timezoneCallback(null, timezoneData.data);
-                    _timezoneData = timezoneData.data;
-                }
-            }.bindenv(this));
+                            agent.on("location.class.internal.setloc", _setLocale.bindenv(this));
 
             if (_debug) server.log("Location class instantiated on the device");
         }
@@ -103,14 +89,12 @@ class Location {
                 if (_debug) server.log("Sending WiFi data to agent");
                 agent.send("location.class.internal.setwlans", _networks);
             } else {
-                // There is no existing list of WLANs, or a new one is required,
-                // so go and get one now
+                // There is no existing list of WLANs, or a new one is required
                 if (_debug) server.log("Getting WiFi data for the agent");
                 _scan();
             }
         } else {
             // Does the agent have a list of WLANs it can use?
-            // NOTE if 'usePrevious' is false, we get a WLAN list anyway
             if (usePrevious && _networks != null) {
                 // Use the existing list of local WLANs
                 _locateFromWLANs();
@@ -239,6 +223,7 @@ class Location {
     }
 
     function _getPlace() {
+        // Use the obtained co-ordinates to assemble the place name request
         local url = format("%slatlng=%f,%f&key=%s", GEOCODE_URL, _latitude, _longitude, _geoLocateKey);
         local request = http.get(url);
         if (_debug) server.log("Requesting place name data from Google");
@@ -262,20 +247,8 @@ class Location {
 
         if (response.statuscode == 200) {
             _locating = false;
-
-            // Send location data to the device
-            local senddata = {};
-            senddata.latitude <- _latitude;
-            senddata.longitude <- _longitude;
-
-            if ("results" in data) {
-                _placeData = data.results;
-                senddata.placeData <- data.results;
-            }
-
-            device.send("location.class.internal.setloc", senddata);
-            if (_debug) server.log("Sending location to device");
-
+            if ("results" in data) _placeData = data.results;
+            
             // Get the timezone
             _timezoning = true;
             _getTimezone();
@@ -291,7 +264,7 @@ class Location {
     }
 
     function _getTimezone() {
-        // Determine the timezone at the device's location. For this we must have a location
+        // Get the device's timezone using the obtained co-ordinates
         local url = format("%slocation=%f,%f&timestamp=%d&key=%s", TIMEZONE_URL, _latitude, _longitude, time(), _geoLocateKey);
         local request = http.get(url, {});
         if (_debug) server.log("Requesting location timezone data from Google");
@@ -313,9 +286,10 @@ class Location {
             return;
         }
 
-        _timezoning = false;
         if (response.statuscode == 200) {
+            _timezoning = false;
             _timezoneData = {};
+            
             if ("status" in data) {
                 if (data.status == "OK") {
                     // Success
@@ -326,9 +300,20 @@ class Location {
                     _timezoneData.dateStr <- format("%04d-%02d-%02d %02d:%02d:%02d", d.year, d.month+1, d.day, d.hour, d.min, d.sec);
                     _timezoneData.gmtOffset <- data.rawOffset + data.dstOffset;
                     _timezoneData.gmtOffsetStr <- format("GMT%s%d", _timezoneData.gmtOffset < 0 ? "-" : "+", math.abs(_timezoneData.gmtOffset / 3600));
+                    
+                    // Send the location data to the device
+                    local sendData = {};
+                    sendData.latitude <- _lattitude;
+                    sendData.longitude <- _longitude;
+                    sendData.placeData <- _placeData;
+                    sendData.timezoneData <- _timezoneData;
+                    
+                    device.send("location.class.internal.setloc", sendData);
+                    if (_debug) server.log("Location data sent to device");
                 }
             }
-
+            
+            // Finally, call the stored 'located' callback
             if (_locatedCallback != null) _locatedCallback();
         } else {
             if (_debug) server.log("Google sent error code: " + response.statuscode);
@@ -337,6 +322,7 @@ class Location {
                 imp.wakeup(60, _getTimezone.bindenv(this));
             } else {
                 if ("error" in data) _handleError(data.error);
+                _timezoning = false;
             }
         }
     }
@@ -368,9 +354,6 @@ class Location {
                 imp.wakeup(delay, _locateFromWLANs.bindenv(this));
             }
         }
-
-
-
     }
 
     // ********** DEVICE private functions **********
@@ -380,8 +363,11 @@ class Location {
         if ("latitude" in data) _latitude = data.latitude;
         if ("longitude" in data) _longitude = data.longitude;
         if ("placeData" in data) _placeData = data.placeData;
+        if ("timezoneData" in data) _timezoneData = data.timezoneData;
+        
         _located = true;
         _locating = false;
+        _timezoning = false;
 
         // Call the 'device located' callback. This should only be
         // set if the location process was initiated by the device
