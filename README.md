@@ -2,9 +2,9 @@
 
 Location is a Squirrel class written to provide support for Google’s geolocation API on Electric Imp devices.
 
-It should be included and instantiated in **both** device code and agent code &mdash; use the same code for both. The two instances will communicate as required to locate the device based on nearby WiFi networks. This data is sent to Google by the agent instance, which returns the device’s latitude and longitude.
+It should be included and instantiated in **both** device code and agent code &mdash; use the same code for both. The two instances will communicate as required to locate the device based on nearby WiFi networks. This data is sent to Google by the agent instance, which returns the device’s latitude and longitude. With these co-ordinates, the code obtains the name of the device’s location, and the GMT offset and date at that location.  
 
-Google’s [geolocation API](https://developers.google.com/maps/documentation/geolocation/intro) controls access through the use of an API key. You must obtain your own API key and pass it into the device and agent instances of the Location class at instantiation. You will need to enabled these APIs in the [developer console](https://console.developers.google.com/apis).
+Google’s [geolocation API](https://developers.google.com/maps/documentation/geolocation/intro) controls access through the use of an API key. You must obtain your own API key and pass it into the device and agent instances of the Location class at instantiation. You will need to enabled the geolocation, geocoding and timezone APIs in the [developer console](https://console.developers.google.com/apis).
 
 **Note** Version 1.2.0 adds support for impOS&trade; 36’s asynchronous version of *imp.scanwifinetworks()*. This version is compatible with earlier versions of impOS.
 
@@ -81,6 +81,7 @@ Details of the limits Google applies can be found [here](https://developers.goog
 
 - 1.4.0
     - Add support for Google's Timezone API to determine the timezone in which the device is found.
+    - Minor code changes; documentation improvements.
 - 1.3.0
     - Add support for Google's GeoCoding API to optionally reverse geolocate based on co-ordinates.
     - Minor code changes; documentation improvements.
@@ -96,11 +97,11 @@ Details of the limits Google applies can be found [here](https://developers.goog
 - 1.1.0
     - Initial release.
 
-## Constructor
+## Class Usage: Constructor
 
 ### Location(*googleGeoLocationApiKey[, debugFlag]*)
 
-The constructor’s two parameters are your Google geolocation API key (mandatory on the agent instance; not required for the device instance) and an optional debugging flag. The latter defaults to `false` &mdash; progress reports will not be logged.
+The constructor’s two parameters are your Google geolocation API key (mandatory on the agent instance; not required or used for the device instance) and an optional debugging flag. The latter defaults to `false` &mdash; progress reports will not be logged.
 
 The geolocation API key is required by the agent to locate the device by latitude and longitude. If you don’t provide a geolocation API key, the library will throw a warning.
 
