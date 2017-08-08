@@ -140,13 +140,14 @@ class Location {
     }
 
     function getTimezone() {
-        // Returns the timezone information as a table with two possible keys: 'data' or 'error'
+        // Returns the location as a table with keys, 'dateStr', 'gmtOffsetStr',
+        // or one key, 'error', if the instance has not yet got a location (or is getting it)
         local timezone = {};
 
         if (_timezoneData != null && !_timezoning) {
             timezone = _timezoneData;
         } else {
-            if (_timezone == null) timezone.error <- "Device timezone not yet obtained or cannot be obtained";
+            if (_timezone == null || _timezone.len() == 0) timezone.error <- "Device timezone not yet obtained or cannot be obtained";
             if (_timezoning) timezone.error <- "Device timezone not yet obtained. Please try again shortly";
         }
 
@@ -206,6 +207,7 @@ class Location {
         local data = null;
 
         try {
+            // Make sure the returned JSON can be decoded
             data = http.jsondecode(response.body);
         } catch (err) {
             // Returned data not JSON?
@@ -216,12 +218,13 @@ class Location {
 
         if (response.statuscode == 200) {
             if ("location" in data) {
+                // Record the received information
                 _latitude = data.location.lat;
                 _longitude = data.location.lng;
-                _located = true;
                 _locatedTime = time();
+                _located = true;
 
-                // Get the location
+                // Now get the location
                 _getPlace();
             }
         } else {
@@ -238,13 +241,13 @@ class Location {
     function _getPlace() {
         local url = format("%slatlng=%f,%f&key=%s", GEOCODE_URL, _latitude, _longitude, _geoLocateKey);
         local request = http.get(url);
-        if (_debug) server.log("Requesting location name data from Google");
+        if (_debug) server.log("Requesting place name data from Google");
         request.sendasync(_processPlace.bindenv(this));
     }
 
     function _processPlace(response) {
         // This is run *only* on an agent, to process data returned by Google
-        if (_debug) server.log("Processing location name data received from Google");
+        if (_debug) server.log("Processing place name data received from Google");
         local data = null;
 
         try {
@@ -258,9 +261,9 @@ class Location {
         }
 
         if (response.statuscode == 200) {
-            // The library stores the location data, it does not parse it
             _locating = false;
 
+            // Send location data to the device
             local senddata = {};
             senddata.latitude <- _latitude;
             senddata.longitude <- _longitude;
@@ -270,7 +273,6 @@ class Location {
                 senddata.placeData <- data.results;
             }
 
-            // Send location data to the device
             device.send("location.class.internal.setloc", senddata);
             if (_debug) server.log("Sending location to device");
 
@@ -300,7 +302,6 @@ class Location {
         // Process the data returned by Google
         if (_debug) server.log("Processing location timezone data received from Google");
         local data = null;
-        local err = null;
 
         try {
             // Make sure the returned JSON can be decoded
@@ -313,8 +314,8 @@ class Location {
         }
 
         _timezoning = false;
-        _timezoneData = {};
         if (response.statuscode == 200) {
+            _timezoneData = {};
             if ("status" in data) {
                 if (data.status == "OK") {
                     // Success
@@ -326,11 +327,9 @@ class Location {
                     _timezoneData.gmtOffset <- data.rawOffset + data.dstOffset;
                     _timezoneData.gmtOffsetStr <- format("GMT%s%d", _timezoneData.gmtOffset < 0 ? "-" : "+", math.abs(_timezoneData.gmtOffset / 3600));
                 }
-            } else {
-                server.log("Bad status");
             }
 
-            _locatedCallback();
+            if (_locatedCallback != null) _locatedCallback();
         } else {
             if (_debug) server.log("Google sent error code: " + response.statuscode);
             if (response.statuscode > 499) {
