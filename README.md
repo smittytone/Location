@@ -46,9 +46,9 @@ device.on("ready", function(dummy) {
     locator.locate(false, function() {
         // Code below called when location is determined (or an error generated)
         local locale = locator.getLocation();
-        if ("err" in locale) {
+        if ("error" in locale) {
             // Report error
-            server.error(locale.err);
+            server.error(locale.error);
         } else {
             // No error, so extract the co-ordinates...
             server.log("Device co-ordinates: " + locale.longitude + ", " + locale.latitude);
@@ -56,6 +56,16 @@ device.on("ready", function(dummy) {
 
             // ...and call the weather forecast service
             getWeatherForecast(locale.longitude, locale.latitude);
+        }
+
+        local timezone = locator.getTimezone();
+        if ("error" in timezone) {
+            // Report error
+            server.error(timezone.error);
+        } else {
+            // No error, so extract the timezone
+            server.log("Device timezone: " + timezone.gmtOffsetStr);
+            server.log("Device time: " + timezone.dateStr);
         }
     });
 });
@@ -105,19 +115,19 @@ locator = Location("<YOUR_GEOLOCATION_API_KEY>", true);
 
 ### locate(*[usePrevious][, callback]*)
 
-The *locate()* function triggers an attempt to locate the device. It may be called by either the agent or device instance. If called by the agent instance, it is recommended that you first check that the device is connected. An optional callback function may be passed if your application needs to be notified when the location has been determined (or not).
+The *locate()* function triggers an attempt to locate the device. It may be called by either the agent or device instance. If called by the agent instance, it is recommended that you first check that the device is connected. An optional callback function may be passed if your application needs to be notified when the location has been determined (or not). It takes no parameters of its own.
 
 The *usePrevious* parameter is also optional: pass `true` to make use of an existing record of nearby WiFi networks, if one is available. This defaults to `true`. If you pass `true` and the device lacks such a list, it will automatically create one.
 
-The *callback* parameter is optional &mdash; use it to call code when the device’s location has been determined. It takes no parameters of its own.
+**Note** *locate()* does not return any information &mdash; you should use the callback to call *getLocation()* and/or *getTimezone()* to retrieve these values.
 
 ### Example
 
 ```squirrel
 locator.locate(false, function() {
     locale = locator.getLocation();  // 'locale' is a global table variable
-    if ("err" in locale) {
-        server.error(locale.err);
+    if ("error" in locale) {
+        server.error(locale.error);
     } else {
         server.log("Device co-ordinates: " + locale.longitude + ", " + locale.latitude);
         server.log("Device location: " + locale.place);
@@ -127,17 +137,31 @@ locator.locate(false, function() {
 
 ### getLocation()
 
-The *getLocation()* function returns a table with *either* the keys *latitude*, *longitude* and *place*, *or* the key *err*. The first two of these keys’ values will be the device’s co-ordinates as determined by the geolocation API. The *place* key’s value is a human-readable string giving the device’s locale. The *err* key is *only* present when an error has taken place, and so should be used as an error check.
+The *getLocation()* function returns a table with *either* the keys *latitude*, *longitude* and *place*, *or* the key *error*. The first two of these keys’ values will be the device’s co-ordinates as determined by the geolocation API. The *place* key’s value is a human-readable string giving the device’s locale. The *error* key is *only* present when an error has taken place, and so should be used as an error check.
 
 ### Example
 
 ```squirrel
-locale = locator.getLocation();
-if ("err" in locale) {
-    server.error(locale.err);
+local location = locator.getLocation();
+if ("error" in location) {
+    server.error(location.error);
 } else {
-    server.log("Device co-ordinates: " + locale.longitude + ", " + locale.latitude);
-    server.log("Device location: " + locale.place);
+    server.log("Device co-ordinates: " + location.longitude + ", " + location.latitude);
+    server.log("Device location: " + location.place);
+}
+```
+
+### getTimezone()
+
+The *getTimezone()* function returns a table with *either* the keys *gmtOffset*, *date*, *time*, *gmtOffsetStr* and *dateStr*, *or* the key *error*. The first three of these keys’ values will be the device’s timezone relative to GMT, and the date and time at the device’s location. The *gmtOffsetStr* and *dateStr* keys provide human-readable string versions of that information. The *error* key is *only* present when an error has taken place, and so should be used as an error check.
+
+```squirrel
+local timezone = locator.getTimezone();
+if ("error" in timezone) {
+    server.error(timezone.error);
+} else {
+    server.log("Device timezone: " + timezone.gmtOffsetStr);
+    server.log("Device date/time: " + timezone.dateStr);
 }
 ```
 
