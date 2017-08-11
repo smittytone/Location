@@ -13,9 +13,9 @@ class Location {
     // Copyright Tony Smith, 2016-17
 
     static VERSION = "1.4.0";
-    
+
     // Private properties
-    
+
     _latitude = 0;
     _longitude = 0;
     _placeData = null;
@@ -153,7 +153,6 @@ class Location {
     function _locateFromWLANs(networks = null) {
         // This is run *only* on an agent, to process WLAN scan data from the device
         // and send it to Google, which should return a location record
-        if (_debug) server.log("There are " + networks.len() + " WLANs around device");
         if (networks) _networks = networks;
         if (networks == null && _networks != null) networks = _networks;
 
@@ -166,6 +165,8 @@ class Location {
             _locating = false;
             return;
         }
+
+        if (_debug) server.log("There are " + networks.len() + " WLANs around device");
 
         local url = GEOLOCATION_URL + _geoLocateKey;
         local header = {"Content-Type" : "application/json"};
@@ -247,7 +248,7 @@ class Location {
         if (response.statuscode == 200) {
             _locating = false;
             if ("results" in data) _placeData = data.results;
-            
+
             // Get the timezone
             _timezoning = true;
             _getTimezone();
@@ -288,7 +289,7 @@ class Location {
         if (response.statuscode == 200) {
             _timezoning = false;
             _timezoneData = {};
-            
+
             if ("status" in data) {
                 if (data.status == "OK") {
                     // Success
@@ -299,19 +300,19 @@ class Location {
                     _timezoneData.dateStr <- format("%04d-%02d-%02d %02d:%02d:%02d", d.year, d.month+1, d.day, d.hour, d.min, d.sec);
                     _timezoneData.gmtOffset <- data.rawOffset + data.dstOffset;
                     _timezoneData.gmtOffsetStr <- format("GMT%s%d", _timezoneData.gmtOffset < 0 ? "-" : "+", math.abs(_timezoneData.gmtOffset / 3600));
-                    
+
                     // Send the location data to the device
                     local sendData = {};
-                    sendData.latitude <- _lattitude;
+                    sendData.latitude <- _latitude;
                     sendData.longitude <- _longitude;
                     sendData.placeData <- _placeData;
                     sendData.timezoneData <- _timezoneData;
-                    
+
                     device.send("location.class.internal.setloc", sendData);
                     if (_debug) server.log("Location data sent to device");
                 }
             }
-            
+
             // Finally, call the stored 'located' callback
             if (_locatedCallback != null) _locatedCallback();
         } else {
@@ -363,7 +364,7 @@ class Location {
         if ("longitude" in data) _longitude = data.longitude;
         if ("placeData" in data) _placeData = data.placeData;
         if ("timezoneData" in data) _timezoneData = data.timezoneData;
-        
+
         _located = true;
         _locating = false;
         _timezoning = false;
