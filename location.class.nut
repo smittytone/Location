@@ -60,6 +60,7 @@ class Location {
 
             // Register handler for when agent asks for WiFi scan data
             agent.on("location.class.internal.getwlans", function(dummy) {
+                _locating = true;
                 _scan();
             }.bindenv(this));
 
@@ -153,6 +154,8 @@ class Location {
     function _locateFromWLANs(networks = null) {
         // This is run *only* on an agent, to process WLAN scan data from the device
         // and send it to Google, which should return a location record
+        _locating = true;
+
         if (networks) _networks = networks;
         if (networks == null && _networks != null) networks = _networks;
 
@@ -179,7 +182,7 @@ class Location {
             body.wifiAccessPoints.append(net);
         }
 
-        // Send the WLAN data
+        // Send the WLAN data to Google
         if (_debug) server.log("Requesting location co-ordinate data from Google");
         local request = http.post(url, header, http.jsonencode(body));
         request.sendasync(_processLocation.bindenv(this));
@@ -206,7 +209,6 @@ class Location {
                 _latitude = data.location.lat;
                 _longitude = data.location.lng;
                 _locatedTime = time();
-                _located = true;
 
                 // Now get the location
                 _getPlace();
@@ -247,6 +249,7 @@ class Location {
 
         if (response.statuscode == 200) {
             _locating = false;
+            _located = true;
             if ("results" in data) _placeData = data.results;
 
             // Get the timezone
