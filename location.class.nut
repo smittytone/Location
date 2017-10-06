@@ -12,7 +12,7 @@ class Location {
 
     // Copyright Tony Smith, 2016-17
 
-    static VERSION = "1.4.0";
+    static VERSION = "1.4.1";
 
     // Private properties
 

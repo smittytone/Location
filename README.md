@@ -1,8 +1,8 @@
-# Location 1.4.0
+# Location 1.4.1
 
 Location is a Squirrel class written to provide support for Google’s geolocation API on Electric Imp devices.
 
-It should be included and instantiated in **both** device code and agent code &mdash; use the same code for both. The two instances will communicate as required to locate the device based on nearby WiFi networks. This data is sent to Google by the agent instance, which returns the device’s latitude and longitude. With these co-ordinates, the code obtains the name of the device’s location, and the GMT offset and date at that location.  
+It should be included and instantiated in **both** device code and agent code &mdash; use the same code for both. The two instances will communicate as required to locate the device based on nearby WiFi networks. This data is sent to Google by the agent instance, which returns the device’s latitude and longitude. With these co-ordinates, the code obtains the name of the device’s location, and the GMT offset and date at that location.
 
 Google’s [geolocation API](https://developers.google.com/maps/documentation/geolocation/intro) controls access through the use of an API key. You must obtain your own API key and pass it into the device and agent instances of the Location class at instantiation. You will need to enabled the geolocation, geocoding and timezone APIs in the [developer console](https://console.developers.google.com/apis).
 
@@ -79,23 +79,25 @@ Details of the limits Google applies can be found [here](https://developers.goog
 
 ## Release Notes
 
+- 1.4.1
+    - Minor code change: rename constants to be class-specific
 - 1.4.0
-    - Add support for Google's Timezone API to determine the timezone in which the device is found.
-    - Minor code changes; documentation improvements.
+    - Add support for Google's Timezone API to determine the timezone in which the device is found
+    - Minor code changes; documentation improvements
 - 1.3.0
-    - Add support for Google's GeoCoding API to optionally reverse geolocate based on co-ordinates.
-    - Minor code changes; documentation improvements.
+    - Add support for Google's GeoCoding API to optionally reverse geolocate based on co-ordinates
+    - Minor code changes; documentation improvements
 - 1.2.2
-    - WiFi scan code refactor to reduce library memory footprint.
+    - WiFi scan code refactor to reduce library memory footprint
 - 1.2.1
-    - Small code tweaks; clarify that the API key is only needed by the agent constructor.
+    - Small code tweaks; clarify that the API key is only needed by the agent constructor
 - 1.2.0
-    - Make *imp.scanwifinetworks()* calls asynchronous (requires impOS 36).
-    - *locate()* now uses a previously gathered list of WLANs, if present, by default.
+    - Make *imp.scanwifinetworks()* calls asynchronous (requires impOS 36)
+    - *locate()* now uses a previously gathered list of WLANs, if present, by default
 - 1.1.1
-    - Minor code changes.
+    - Minor code changes
 - 1.1.0
-    - Initial release.
+    - Initial release
 
 ## Class Usage: Constructor
 
