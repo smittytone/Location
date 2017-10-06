@@ -1,6 +1,6 @@
-const GEOLOCATION_URL = "https://www.googleapis.com/geolocation/v1/geolocate?key=";
-const GEOCODE_URL = "https://maps.googleapis.com/maps/api/geocode/json?";
-const TIMEZONE_URL = "https://maps.googleapis.com/maps/api/timezone/json?";
+const LOCATION_CLASS_GEOLOCATION_URL = "https://www.googleapis.com/geolocation/v1/geolocate?key=";
+const LOCATION_CLASS_GEOCODE_URL = "https://maps.googleapis.com/maps/api/geocode/json?";
+const LOCATION_CLASS_TIMEZONE_URL = "https://maps.googleapis.com/maps/api/timezone/json?";
 
 class Location {
 
@@ -9,7 +9,7 @@ class Location {
     // necessary on the agent. It is designed to be called once during a device's
     // current runtime, in order to determine the device’s latitude and longitude,
     // to pass into a weather forecast service, for example.
-    //
+
     // Copyright Tony Smith, 2016-17
 
     static VERSION = "1.4.0";
@@ -171,7 +171,7 @@ class Location {
 
         if (_debug) server.log("There are " + networks.len() + " WLANs around device");
 
-        local url = GEOLOCATION_URL + _geoLocateKey;
+        local url = LOCATION_CLASS_GEOLOCATION_URL + _geoLocateKey;
         local header = {"Content-Type" : "application/json"};
         local body = {};
         body.wifiAccessPoints <- [];
@@ -226,7 +226,7 @@ class Location {
 
     function _getPlace() {
         // Use the obtained co-ordinates to assemble the place name request
-        local url = format("%slatlng=%f,%f&key=%s", GEOCODE_URL, _latitude, _longitude, _geoLocateKey);
+        local url = format("%slatlng=%f,%f&key=%s", LOCATION_CLASS_GEOCODE_URL, _latitude, _longitude, _geoLocateKey);
         local request = http.get(url);
         if (_debug) server.log("Requesting place name data from Google");
         request.sendasync(_processPlace.bindenv(this));
@@ -268,7 +268,7 @@ class Location {
 
     function _getTimezone() {
         // Get the device's timezone using the obtained co-ordinates
-        local url = format("%slocation=%f,%f&timestamp=%d&key=%s", TIMEZONE_URL, _latitude, _longitude, time(), _geoLocateKey);
+        local url = format("%slocation=%f,%f&timestamp=%d&key=%s", LOCATION_CLASS_TIMEZONE_URL, _latitude, _longitude, time(), _geoLocateKey);
         local request = http.get(url, {});
         if (_debug) server.log("Requesting location timezone data from Google");
         request.sendasync(_processTimezone.bindenv(this));
