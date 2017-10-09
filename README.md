@@ -1,10 +1,10 @@
-# Location 1.2.2
+# Location 1.4.1
 
 Location is a Squirrel class written to provide support for Google’s geolocation API on Electric Imp devices.
 
-It should be included and instantiated in **both** device code and agent code &mdash; use the same code for both. The two instances will communicate as required to locate the device based on nearby WiFi networks. This data is sent to Google by the agent instance, which returns the device’s latitude and longitude.
+It should be included and instantiated in **both** device code and agent code &mdash; use the same code for both. The two instances will communicate as required to locate the device based on nearby WiFi networks. This data is sent to Google by the agent instance, which returns the device’s latitude and longitude. With these co-ordinates, the code obtains the name of the device’s location, and the GMT offset and date at that location.
 
-Google’s [geolocation API](https://developers.google.com/maps/documentation/geolocation/intro) controls access through the use of an API key. You must obtain your own API key and pass it into the device and agent instances of the Location class at instantiation.
+Google’s [geolocation API](https://developers.google.com/maps/documentation/geolocation/intro) controls access through the use of an API key. You must obtain your own API key and pass it into the device and agent instances of the Location class at instantiation. You will need to enabled the geolocation, geocoding and timezone APIs in the [developer console](https://console.developers.google.com/apis).
 
 **Note** Version 1.2.0 adds support for impOS&trade; 36’s asynchronous version of *imp.scanwifinetworks()*. This version is compatible with earlier versions of impOS.
 
@@ -12,14 +12,15 @@ Google’s [geolocation API](https://developers.google.com/maps/documentation/ge
 
 Consider a weather station application. In this case, the agent needs to determine the device’s location in order to pass the co-ordinates to a third-party weather forecast API. The agent therefore initiates the process *when the device has signalled its readiness*:
 
-1. Device completes start-up and calls [the *locate()* function](#locateuseprevious-callback).
-2. Device gathers all nearby wireless networks and sends this to the agent.
-3. Agent relays network list to Google’s geolocation API.
-4. Google returns the determined latitude and longitude. This takes place asynchronously.
-5. Agent process the data returned by google.
-6. Agent stores the location locally and uses it to format the message to be sent to the weather forecast API.
-7. Agent relays the location to the device.
-8. Device stores its location locally for future reference.
+1. Device completes start-up and signals the agent.
+2. Agent initiates a location, causing it to signal the device to scan for local WiFi networks.
+3. Device gathers all nearby wireless networks and sends this to the agent.
+4. Agent relays network list to Google’s geolocation API.
+5. Google returns the determined latitude and longitude. This takes place asynchronously.
+6. Agent process the data returned by google.
+7. Agent stores the location locally and uses it to format the message to be sent to the weather forecast API.
+8. Agent relays the location to the device.
+9. Device stores its location locally for future reference.
 
 #### Device Code
 
@@ -45,15 +46,26 @@ device.on("ready", function(dummy) {
     locator.locate(false, function() {
         // Code below called when location is determined (or an error generated)
         local locale = locator.getLocation();
-        if (!("err" in locale)) {
-            // No error, so extract the co-ordinates
-            server.log("Device location: " + locale.longitude + ", " + locale.latitude);
-
-            // Call the weather forecast service
-            getWeatherForecast(locale.longitude, locale.latitude);
-        } else {
+        if ("error" in locale) {
             // Report error
-            server.error(locale.err);
+            server.error(locale.error);
+        } else {
+            // No error, so extract the co-ordinates...
+            server.log("Device co-ordinates: " + locale.longitude + ", " + locale.latitude);
+            server.log("Device location: " + locale.place);
+
+            // ...and call the weather forecast service
+            getWeatherForecast(locale.longitude, locale.latitude);
+        }
+
+        local timezone = locator.getTimezone();
+        if ("error" in timezone) {
+            // Report error
+            server.error(timezone.error);
+        } else {
+            // No error, so extract the timezone
+            server.log("Device timezone: " + timezone.gmtOffsetStr);
+            server.log("Device time: " + timezone.dateStr);
         }
     });
 });
@@ -67,23 +79,33 @@ Details of the limits Google applies can be found [here](https://developers.goog
 
 ## Release Notes
 
+- 1.4.1
+    - Minor code change: rename constants to be class-specific
+- 1.4.0
+    - Add support for Google's Timezone API to determine the timezone in which the device is found
+    - Minor code changes; documentation improvements
+- 1.3.0
+    - Add support for Google's GeoCoding API to optionally reverse geolocate based on co-ordinates
+    - Minor code changes; documentation improvements
 - 1.2.2
-    - WiFi scan code refactoring to reduce library memory footprint.
+    - WiFi scan code refactor to reduce library memory footprint
 - 1.2.1
-    - Small code tweaks; clarify that the API key is only needed by the agent constructor.
+    - Small code tweaks; clarify that the API key is only needed by the agent constructor
 - 1.2.0
-    - Make imp.scanwifinetworks() calls asynchronous (requires impOS 36).
-    - *locate()* now uses a previously gathered list of WLANs, if present, by default.
+    - Make *imp.scanwifinetworks()* calls asynchronous (requires impOS 36)
+    - *locate()* now uses a previously gathered list of WLANs, if present, by default
 - 1.1.1
-    - Minor code changes.
+    - Minor code changes
 - 1.1.0
-    - Initial release.
+    - Initial release
 
-## Constructor
+## Class Usage: Constructor
 
 ### Location(*googleGeoLocationApiKey[, debugFlag]*)
 
-The constructor’s two parameters are your Google geolocation API key (mandatory on the agent instance; not required for the device instance) and an optional debugging flag. The latter defaults to `false` &mdash; progress reports will not be logged.
+The constructor’s two parameters are your Google geolocation API key (mandatory on the agent instance; not required or used for the device instance) and an optional debugging flag. The latter defaults to `false` &mdash; progress reports will not be logged.
+
+The geolocation API key is required by the agent to locate the device by latitude and longitude. If you don’t provide a geolocation API key, the library will throw a warning.
 
 ### Example
 
@@ -96,35 +118,53 @@ locator = Location("<YOUR_GEOLOCATION_API_KEY>", true);
 
 ### locate(*[usePrevious][, callback]*)
 
-The *locate()* function triggers an attempt to locate the device. It may be called by either the agent or device instance. If called by the agent instance, it is recommended that you first check that the device is connected. An optional callback function may be passed if your application needs to be notified when the location has been determined (or not).
+The *locate()* function triggers an attempt to locate the device. It may be called by either the agent or device instance. If called by the agent instance, it is recommended that you first check that the device is connected. An optional callback function may be passed if your application needs to be notified when the location has been determined (or not). It takes no parameters of its own.
 
 The *usePrevious* parameter is also optional: pass `true` to make use of an existing record of nearby WiFi networks, if one is available. This defaults to `true`. If you pass `true` and the device lacks such a list, it will automatically create one.
+
+**Note** *locate()* does not return any information &mdash; you should use the callback to call *getLocation()* and/or *getTimezone()* to retrieve these values.
 
 ### Example
 
 ```squirrel
 locator.locate(false, function() {
     locale = locator.getLocation();  // 'locale' is a global table variable
-    if (!("err" in locale)) {
-        server.log("Device location: " + locale.longitude + ", " + locale.latitude);
+    if ("error" in locale) {
+        server.error(locale.error);
     } else {
-        server.error(locale.err);
+        server.log("Device co-ordinates: " + locale.longitude + ", " + locale.latitude);
+        server.log("Device location: " + locale.place);
     }
 });
 ```
 
 ### getLocation()
 
-The *getLocation()* function returns a table with *either* the keys *latitude* and *longitude*, *or* the key *err*. The first two of these keys’ values will be the device’s co-ordinates as determined by the geolocation API. The *err* key is *only* present when an error has taken place, and so should be used as an error check.
+The *getLocation()* function returns a table with *either* the keys *latitude*, *longitude* and *place*, *or* the key *error*. The first two of these keys’ values will be the device’s co-ordinates as determined by the geolocation API. The *place* key’s value is a human-readable string giving the device’s locale. The *error* key is *only* present when an error has taken place, and so should be used as an error check.
 
 ### Example
 
 ```squirrel
-locale = locator.getLocation();
-if (!("err" in locale)) {
-    server.log("Device location: " + locale.longitude + ", " + locale.latitude);
+local location = locator.getLocation();
+if ("error" in location) {
+    server.error(location.error);
 } else {
-    server.error(locale.err);
+    server.log("Device co-ordinates: " + location.longitude + ", " + location.latitude);
+    server.log("Device location: " + location.place);
+}
+```
+
+### getTimezone()
+
+The *getTimezone()* function returns a table with *either* the keys *gmtOffset*, *date*, *time*, *gmtOffsetStr* and *dateStr*, *or* the key *error*. The first three of these keys’ values will be the device’s timezone relative to GMT, and the date and time at the device’s location. The *gmtOffsetStr* and *dateStr* keys provide human-readable string versions of that information. The *error* key is *only* present when an error has taken place, and so should be used as an error check.
+
+```squirrel
+local timezone = locator.getTimezone();
+if ("error" in timezone) {
+    server.error(timezone.error);
+} else {
+    server.log("Device timezone: " + timezone.gmtOffsetStr);
+    server.log("Device date/time: " + timezone.dateStr);
 }
 ```
 
