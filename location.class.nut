@@ -339,6 +339,8 @@ class Location {
                 server.error("Google reports your Location API Key is invalid. Location cannot be determined");
             } else if (error.errors[0].reason == "parseError") {
                 sever.error("Request JSON data malformed");
+            } else {
+                sever.error("Error:" + error.errors[0].reason);
             }
         }
 
