@@ -13,7 +13,7 @@ class Location {
 
     // Copyright Tony Smith, 2016-18
 
-    static VERSION = "1.4.2";
+    static VERSION = "1.5.0";
 
     // Private properties
 
@@ -22,7 +22,7 @@ class Location {
     _placeData = null;
     _timezoneData = null;
     _locatedCallback = null;
-    _geoLocateKey = null;
+    _keyTable = null;
     _locatedTime = null;
     _networks = null;
     _located = false;
@@ -44,11 +44,28 @@ class Location {
 
             // Check for a value Google Geolocation API key
             if (googleGeoLocationApiKey == null ||
-                typeof googleGeoLocationApiKey != "string" ||
+                (typeof googleGeoLocationApiKey != "string" && typeof googleGeoLocationApiKey != "table") ||
                 googleGeoLocationApiKey.len() == 0) {
-                throw "Location class requires a non-null Google GeoLocation API key as a string";
+                throw "Location class requires a non-null Google API key as a string, or keys as a table";
             } else {
-                _geoLocateKey = googleGeoLocationApiKey;
+                if (typeof googleGeoLocationApiKey == "string") {
+                    _keyTable = { "GEOLOCATION_API_KEY" : googleGeoLocationApiKey,
+                                  "GEOCODING_API_KEY"   : googleGeoLocationApiKey,
+                                  "TIMEZONE_API_KEY"    : googleGeoLocationApiKey };
+                } else {
+                     // Check we have all of the three required keys
+                     if (!("GEOLOCATION_API_KEY" in googleGeoLocationApiKey &&
+                           "GEOCODING_API_KEY" in googleGeoLocationApiKey &&
+                           "TIMEZONE_API_KEY" in googleGeoLocationApiKey)) throw "Location class requires an API-key table with three specific slots (see documentation)";
+
+                     // Set the API key table property to the passed in table
+                     _keyTable = googleGeoLocationApiKey;
+
+                     // Set the keys to strings
+                     foreach (key, value in _keyTable) {
+                        if (typeof value != "string") _keyTable[key] = value.tostring();
+                    }
+                }
             }
 
             // Register handler for when device sends WLAN scan data
@@ -143,15 +160,6 @@ class Location {
 
     // ********** AGENT private functions **********
 
-    function _addColons(bssid) {
-        // Format a WLAN basestation MAC for transmission to Google
-        local result = bssid.slice(0, 2);
-        for (local i = 2 ; i < 12 ; i += 2) {
-            result = result + ":" + bssid.slice(i, i + 2)
-        }
-        return result;
-    }
-
     function _locateFromWLANs(networks = null) {
         // This is run *only* on an agent, to process WLAN scan data from the device
         // and send it to Google, which should return a location record
@@ -172,7 +180,7 @@ class Location {
 
         if (_debug) server.log("There are " + networks.len() + " WLANs around device");
 
-        local url = LOCATION_CLASS_GEOLOCATION_URL + _geoLocateKey;
+        local url = LOCATION_CLASS_GEOLOCATION_URL + _keyTable.GEOLOCATION_API_KEY;
         local header = {"Content-Type" : "application/json"};
         local body = {};
         body.wifiAccessPoints <- [];
@@ -220,14 +228,14 @@ class Location {
                 if (_debug) server.log("Will attempt to re-acquire location in 60s");
                 imp.wakeup(60, _locateFromWLANs.bindenv(this));
             } else {
-                if ("error" in data) _handleError(data.error);
+                if ("error" in data) _handleError(data.error, "Geolocation");
             }
         }
     }
 
     function _getPlace() {
         // Use the obtained co-ordinates to assemble the place name request
-        local url = format("%slatlng=%f,%f&key=%s", LOCATION_CLASS_GEOCODE_URL, _latitude, _longitude, _geoLocateKey);
+        local url = format("%slatlng=%f,%f&key=%s", LOCATION_CLASS_GEOCODE_URL, _latitude, _longitude, _keyTable.GEOCODING_API_KEY);
         local request = http.get(url);
         if (_debug) server.log("Requesting place name data from Google");
         request.sendasync(_processPlace.bindenv(this));
@@ -262,14 +270,14 @@ class Location {
                 if (_debug) server.log("Will attempt to re-acquire location in 60s");
                 imp.wakeup(60, _getPlace.bindenv(this));
             } else {
-                if ("error" in data) _handleError(data.error);
+                if ("error" in data) _handleError(data.error, "Geocoding");
             }
         }
     }
 
     function _getTimezone() {
         // Get the device's timezone using the obtained co-ordinates
-        local url = format("%slocation=%f,%f&timestamp=%d&key=%s", LOCATION_CLASS_TIMEZONE_URL, _latitude, _longitude, time(), _geoLocateKey);
+        local url = format("%slocation=%f,%f&timestamp=%d&key=%s", LOCATION_CLASS_TIMEZONE_URL, _latitude, _longitude, time(), _keyTable.TIMEZONE_API_KEY);
         local request = http.get(url, {});
         if (_debug) server.log("Requesting location timezone data from Google");
         request.sendasync(_processTimezone.bindenv(this));
@@ -325,19 +333,19 @@ class Location {
                 if (_debug) server.log("Will attempt to re-acquire timezone in 60s");
                 imp.wakeup(60, _getTimezone.bindenv(this));
             } else {
-                if ("error" in data) _handleError(data.error);
+                if ("error" in data) _handleError(data.error, "Timezone");
                 _timezoning = false;
             }
         }
     }
 
-    function _handleError(error) {
+    function _handleError(error, api) {
         // This is run *only* on the agent in response to an error condition signalled by Google
         if (error.code == 400) {
             // We can't recover from these errors
             _locating = false;
             if (error.errors[0].reason == "keyInvalid") {
-                server.error("Google reports your Location API Key is invalid. Location cannot be determined");
+                server.error("Google reports your " + api + " key is invalid.");
             } else if (error.errors[0].reason == "parseError") {
                 sever.error("Request JSON data malformed");
             } else {
@@ -360,6 +368,15 @@ class Location {
                 imp.wakeup(delay, _locateFromWLANs.bindenv(this));
             }
         }
+    }
+
+    function _addColons(bssid) {
+        // Format a WLAN basestation MAC for transmission to Google
+        local result = bssid.slice(0, 2);
+        for (local i = 2 ; i < 12 ; i += 2) {
+            result = result + ":" + bssid.slice(i, i + 2)
+        }
+        return result;
     }
 
     // ********** DEVICE private functions **********
