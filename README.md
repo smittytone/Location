@@ -1,4 +1,4 @@
-# Location 1.5.0
+# Location 1.5.0 #
 
 Location is a Squirrel class written to provide support for Google’s geolocation API on Electric Imp devices.
 
@@ -16,7 +16,7 @@ local keyTable = { "GEOLOCATION_API_KEY" : <YOUR_GEOLOCATION_API_KEY>,
 locator <- Location(keyTable);
 ```
 
-All three of the table’s slots must be included and use the names above, even if, for example, you are using one API key for two or three of the APIs:
+All three of the table’s slots must be included and must use the names above, even if, for example, you are using one API key for two or three of the APIs:
 
 ```
 local keyTable = { "GEOLOCATION_API_KEY" : <FIRST_API_KEY>,
@@ -24,7 +24,7 @@ local keyTable = { "GEOLOCATION_API_KEY" : <FIRST_API_KEY>,
                    "TIMEZONE_API_KEY"    : <SECOND_API_KEY> };
 ```
 
-All of table’s values must also be strings.
+All of the table’s values must be strings.
 
 If the table does not include all of the named slots, a runtime error will be thrown.
 
@@ -61,7 +61,11 @@ if (server.isconnected()) {
 #### Agent Code ####
 
 ```squirrel
-locator <- Location("<YOUR_GOOGLE_API_KEY>");
+local keyTable = { "GEOLOCATION_API_KEY" : <YOUR_GEOLOCATION_API_KEY>,
+                   "GEOCODING_API_KEY"   : <YOUR_GEOCODING_API_KEY>,
+                   "TIMEZONE_API_KEY"    : <YOUR_TIMEZONE_API_KEY> };
+
+locator <- Location(keyTable);
 
 device.on("ready", function(dummy) {
     // The following code runs in response to receipt of 'ready' message from device
@@ -102,28 +106,28 @@ Details of the limits Google applies can be found [here](https://developers.goog
 ## Release Notes
 
 - 1.5.0
-    - Add support for multiple Google API keys
+    - Add support for multiple Google API keys.
 - 1.4.2
-    - Minor changes to comments re. API key usage
+    - Minor changes to comments re. API key usage.
 - 1.4.1
-    - Minor code change: rename constants to be class-specific
+    - Minor code change: rename constants to be class-specific.
 - 1.4.0
-    - Add support for Google's Timezone API to determine the timezone in which the device is found
-    - Minor code changes; documentation improvements
+    - Add support for Google's Timezone API to determine the timezone in which the device is found.
+    - Minor code changes; documentation improvements.
 - 1.3.0
-    - Add support for Google's GeoCoding API to optionally reverse geolocate based on co-ordinates
-    - Minor code changes; documentation improvements
+    - Add support for Google's GeoCoding API to optionally reverse geolocate based on co-ordinates.
+    - Minor code changes; documentation improvements.
 - 1.2.2
-    - WiFi scan code refactor to reduce library memory footprint
+    - WiFi scan code refactor to reduce library memory footprint.
 - 1.2.1
-    - Small code tweaks; clarify that the API key is only needed by the agent constructor
+    - Small code tweaks; clarify that the API key is only needed by the agent constructor.
 - 1.2.0
-    - Make *imp.scanwifinetworks()* calls asynchronous (requires impOS 36)
-    - *locate()* now uses a previously gathered list of WLANs, if present, by default
+    - Make *imp.scanwifinetworks()* calls asynchronous (requires impOS 36).
+    - *locate()* now uses a previously gathered list of WLANs, if present, by default.
 - 1.1.1
-    - Minor code changes
+    - Minor code changes.
 - 1.1.0
-    - Initial release
+    - Initial release.
 
 ## Class Usage: Constructor ##
 
