@@ -4,15 +4,16 @@ const LOCATION_CLASS_TIMEZONE_URL = "https://maps.googleapis.com/maps/api/timezo
 
 class Location {
 
-    // This class is designed to be run on both device *and* agent. It requires
-    // a Google Geolocation API key, passed into the constructor, though this is only
-    // necessary on the agent. It is designed to be called once during a device's
-    // current runtime, in order to determine the device’s latitude and longitude,
-    // to pass into a weather forecast service, for example.
+    // This class is designed to be run on both device *and* agent. It requires a Google API key,
+    // passed into the constructor, though this is only necessary on the agent. The API key should
+    // be set to authorize access to the Geolocate, Geocoding and Timezone APIs. At this time, the
+    // library does not support the use of multiple API keys.
+    // The class instance is designed to be called once during a device's current runtime, in order
+    // to determine the device’s latitude and longitude, to pass into a weather forecast service, for example.
 
-    // Copyright Tony Smith, 2016-17
+    // Copyright Tony Smith, 2016-18
 
-    static VERSION = "1.4.1";
+    static VERSION = "1.4.2";
 
     // Private properties
 

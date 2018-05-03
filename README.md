@@ -1,10 +1,10 @@
-# Location 1.4.1
+# Location 1.4.2
 
 Location is a Squirrel class written to provide support for Google’s geolocation API on Electric Imp devices.
 
 It should be included and instantiated in **both** device code and agent code &mdash; use the same code for both. The two instances will communicate as required to locate the device based on nearby WiFi networks. This data is sent to Google by the agent instance, which returns the device’s latitude and longitude. With these co-ordinates, the code obtains the name of the device’s location, and the GMT offset and date at that location.
 
-Google’s [geolocation API](https://developers.google.com/maps/documentation/geolocation/intro) controls access through the use of an API key. You must obtain your own API key and pass it into the device and agent instances of the Location class at instantiation. You will need to enabled the geolocation, geocoding and timezone APIs in the [developer console](https://console.developers.google.com/apis).
+Google’s [geolocation](https://developers.google.com/maps/documentation/geolocation/intro), [Geocoding](https://developers.google.com/maps/documentation/geocoding/intro) and [Timezone](https://developers.google.com/maps/documentation/timezone/intro) APIs controls access through the use of an API key. You must obtain your own API key and pass it into the device and agent instances of the Location class at instantiation. You will also need to enable the geolocation, geocoding and timezone APIs in the [developer console](https://console.developers.google.com/apis). The API key should be set to authorize access to the Geolocate, Geocoding and Timezone APIs. At this time, the library does not support the use of multiple API keys.
 
 **Note** Version 1.2.0 adds support for impOS&trade; 36’s asynchronous version of *imp.scanwifinetworks()*. This version is compatible with earlier versions of impOS.
 
@@ -79,6 +79,8 @@ Details of the limits Google applies can be found [here](https://developers.goog
 
 ## Release Notes
 
+- 1.4.2
+    - Minor changes to comments re. API key usage
 - 1.4.1
     - Minor code change: rename constants to be class-specific
 - 1.4.0
@@ -172,4 +174,4 @@ if ("error" in timezone) {
 
 The Location class is licensed under the [MIT License](./LICENSE).
 
-Copyright &copy; Tony Smith, 2016-17.
+Copyright &copy; Tony Smith, 2016-18.
