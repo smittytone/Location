@@ -107,6 +107,7 @@ Details of the limits Google applies can be found [here](https://developers.goog
 
 - 1.5.0
     - Add support for multiple Google API keys.
+    - Add support for [`seriallog.nut`](https://github.com/smittytone/generic/blob/master/seriallog.nut), which enables device-side serial logging if included in the application (always logs to the imp API *server.log()* too).
 - 1.4.2
     - Minor changes to comments re. API key usage.
 - 1.4.1
@@ -137,7 +138,7 @@ The constructor’s two parameters are your Google geolocation API key (mandator
 
 The geolocation API key is required by the agent to locate the device by latitude and longitude. If you don’t provide a geolocation API key, the library will throw a warning.
 
-### Example ###
+#### Example ####
 
 ```squirrel
 // Enable debugging
@@ -154,7 +155,7 @@ The *usePrevious* parameter is also optional: pass `true` to make use of an exis
 
 **Note** *locate()* does not return any information &mdash; you should use the callback to call *getLocation()* and/or *getTimezone()* to retrieve these values.
 
-### Example ###
+#### Example ####
 
 ```squirrel
 locator.locate(false, function() {
@@ -172,7 +173,7 @@ locator.locate(false, function() {
 
 The *getLocation()* function returns a table with *either* the keys *latitude*, *longitude* and *place*, *or* the key *error*. The first two of these keys’ values will be the device’s co-ordinates as determined by the geolocation API. The *place* key’s value is a human-readable string giving the device’s locale. The *error* key is *only* present when an error has taken place, and so should be used as an error check.
 
-### Example ###
+#### Example ####
 
 ```squirrel
 local location = locator.getLocation();
@@ -187,6 +188,8 @@ if ("error" in location) {
 ### getTimezone() ###
 
 The *getTimezone()* function returns a table with *either* the keys *gmtOffset*, *date*, *time*, *gmtOffsetStr* and *dateStr*, *or* the key *error*. The first three of these keys’ values will be the device’s timezone relative to GMT, and the date and time at the device’s location. The *gmtOffsetStr* and *dateStr* keys provide human-readable string versions of that information. The *error* key is *only* present when an error has taken place, and so should be used as an error check.
+
+#### Example ####
 
 ```squirrel
 local timezone = locator.getTimezone();

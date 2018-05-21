@@ -25,6 +25,7 @@ class Location {
     _keyTable = null;
     _locatedTime = null;
     _networks = null;
+    _deviceLogger = null;
     _located = false;
     _locating = false;
     _timezoning = false;
@@ -85,7 +86,11 @@ class Location {
             // Register handler for when agent sends location data to device
             agent.on("location.class.internal.setloc", _setLocale.bindenv(this));
 
-            if (_debug) server.log("Location class instantiated on the device");
+            // Select logging target, which stored in '_deviceLogger', and will be 'seriallog' if 'seriallog.nut'
+            // has been loaded BEFORE Location is instantiated on the device, otherwise it will be the
+            // imp API object 'server'
+            if ("seriallog" in getroottable()) { _deviceLogger = seriallog; } else { _deviceLogger = server; }
+            if (_debug) _deviceLogger.log("Location class instantiated on the device");
         }
     }
 
@@ -104,11 +109,11 @@ class Location {
             if (usePrevious && _networks != null) {
                 // User wants to use a previously collected list of WLANs;
                 // the device has one, so it just sends it back
-                if (_debug) server.log("Sending WiFi data to agent");
+                if (_debug) _deviceLogger.log("Sending WiFi data to agent");
                 agent.send("location.class.internal.setwlans", _networks);
             } else {
                 // There is no existing list of WLANs, or a new one is required
-                if (_debug) server.log("Getting WiFi data for the agent");
+                if (_debug) _deviceLogger.log("Getting WiFi data for the agent");
                 _scan();
             }
         } else {
@@ -156,12 +161,12 @@ class Location {
         return timezone;
     }
 
-    // ********** Private functions - DO NOT CALL DIRECTLY **********
+    // ********** PRIVATE FUNCTIONS - DO NOT CALL DIRECTLY **********
 
-    // ********** AGENT private functions **********
+    // ********** AGENT PRIVATE FUNCTIONS **********
 
     function _locateFromWLANs(networks = null) {
-        // This is run *only* on an agent, to process WLAN scan data from the device
+        // This is run ONLY on an agent, to process WLAN scan data from the device
         // and send it to Google, which should return a location record
         _locating = true;
 
@@ -172,7 +177,7 @@ class Location {
             // If we have no nearby WLANs and no saved list from a previous scan,
             // we can't proceed, so we need to warn the user. Note this will be reported
             // to the host app when 'getLocation()' is called
-            server.error("There are no nearby networks from which the device's location can be determined.");
+            if (_debug) server.log("There are no nearby networks from which the device's location can be determined.");
             _located = false;
             _locating = false;
             return;
@@ -198,7 +203,7 @@ class Location {
     }
 
     function _processLocation(response) {
-        // This is run *only* on an agent, to process data returned by Google
+        // This is run ONLY on an agent, to process data returned by Google
         if (_debug) server.log("Processing location co-ordinate data received from Google");
         local data = null;
 
@@ -379,7 +384,7 @@ class Location {
         return result;
     }
 
-    // ********** DEVICE private functions **********
+    // ********** DEVICE PRIVATE FUNCTIONS **********
 
     function _setLocale(data) {
         // This is run *only* on a device in response to location data send by the agent
@@ -405,7 +410,7 @@ class Location {
             try {
                 imp.scanwifinetworks(function(wlans) {
                     _networks = wlans;
-                    if (_debug) server.log("Sending WiFi data to agent");
+                    if (_debug) _deviceLogger.log("Sending WiFi data to agent");
                     agent.send("location.class.internal.setwlans", wlans);
                 }.bindenv(this));
             } catch (err) {
@@ -415,7 +420,7 @@ class Location {
         } else {
             // We are on impOS 34 or less, so use sync scanning
             _networks = imp.scanwifinetworks();
-            if (_debug) server.log("Sending WiFi data to agent");
+            if (_debug) _deviceLogger.log("Sending WiFi data to agent");
             agent.send("location.class.internal.setwlans", _networks);
         }
     }
