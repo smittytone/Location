@@ -13,7 +13,7 @@ class Location {
 
     // Copyright Tony Smith, 2016-18
 
-    static VERSION = "1.4.2";
+    static VERSION = "1.5.0";
 
     // Private properties
 
@@ -22,9 +22,10 @@ class Location {
     _placeData = null;
     _timezoneData = null;
     _locatedCallback = null;
-    _geoLocateKey = null;
+    _keyTable = null;
     _locatedTime = null;
     _networks = null;
+    _deviceLogger = null;
     _located = false;
     _locating = false;
     _timezoning = false;
@@ -44,11 +45,28 @@ class Location {
 
             // Check for a value Google Geolocation API key
             if (googleGeoLocationApiKey == null ||
-                typeof googleGeoLocationApiKey != "string" ||
+                (typeof googleGeoLocationApiKey != "string" && typeof googleGeoLocationApiKey != "table") ||
                 googleGeoLocationApiKey.len() == 0) {
-                throw "Location class requires a non-null Google GeoLocation API key as a string";
+                throw "Location class requires a non-null Google API key as a string, or keys as a table";
             } else {
-                _geoLocateKey = googleGeoLocationApiKey;
+                if (typeof googleGeoLocationApiKey == "string") {
+                    _keyTable = { "GEOLOCATION_API_KEY" : googleGeoLocationApiKey,
+                                  "GEOCODING_API_KEY"   : googleGeoLocationApiKey,
+                                  "TIMEZONE_API_KEY"    : googleGeoLocationApiKey };
+                } else {
+                     // Check we have all of the three required keys
+                     if (!("GEOLOCATION_API_KEY" in googleGeoLocationApiKey &&
+                           "GEOCODING_API_KEY" in googleGeoLocationApiKey &&
+                           "TIMEZONE_API_KEY" in googleGeoLocationApiKey)) throw "Location class requires an API-key table with three specific slots (see documentation)";
+
+                     // Set the API key table property to the passed in table
+                     _keyTable = googleGeoLocationApiKey;
+
+                     // Set the keys to strings
+                     foreach (key, value in _keyTable) {
+                        if (typeof value != "string") _keyTable[key] = value.tostring();
+                    }
+                }
             }
 
             // Register handler for when device sends WLAN scan data
@@ -68,7 +86,11 @@ class Location {
             // Register handler for when agent sends location data to device
             agent.on("location.class.internal.setloc", _setLocale.bindenv(this));
 
-            if (_debug) server.log("Location class instantiated on the device");
+            // Select logging target, which stored in '_deviceLogger', and will be 'seriallog' if 'seriallog.nut'
+            // has been loaded BEFORE Location is instantiated on the device, otherwise it will be the
+            // imp API object 'server'
+            if ("seriallog" in getroottable()) { _deviceLogger = seriallog; } else { _deviceLogger = server; }
+            if (_debug) _deviceLogger.log("Location class instantiated on the device");
         }
     }
 
@@ -87,11 +109,11 @@ class Location {
             if (usePrevious && _networks != null) {
                 // User wants to use a previously collected list of WLANs;
                 // the device has one, so it just sends it back
-                if (_debug) server.log("Sending WiFi data to agent");
+                if (_debug) _deviceLogger.log("Sending WiFi data to agent");
                 agent.send("location.class.internal.setwlans", _networks);
             } else {
                 // There is no existing list of WLANs, or a new one is required
-                if (_debug) server.log("Getting WiFi data for the agent");
+                if (_debug) _deviceLogger.log("Getting WiFi data for the agent");
                 _scan();
             }
         } else {
@@ -139,21 +161,12 @@ class Location {
         return timezone;
     }
 
-    // ********** Private functions - DO NOT CALL DIRECTLY **********
+    // ********** PRIVATE FUNCTIONS - DO NOT CALL DIRECTLY **********
 
-    // ********** AGENT private functions **********
-
-    function _addColons(bssid) {
-        // Format a WLAN basestation MAC for transmission to Google
-        local result = bssid.slice(0, 2);
-        for (local i = 2 ; i < 12 ; i += 2) {
-            result = result + ":" + bssid.slice(i, i + 2)
-        }
-        return result;
-    }
+    // ********** AGENT PRIVATE FUNCTIONS **********
 
     function _locateFromWLANs(networks = null) {
-        // This is run *only* on an agent, to process WLAN scan data from the device
+        // This is run ONLY on an agent, to process WLAN scan data from the device
         // and send it to Google, which should return a location record
         _locating = true;
 
@@ -164,7 +177,7 @@ class Location {
             // If we have no nearby WLANs and no saved list from a previous scan,
             // we can't proceed, so we need to warn the user. Note this will be reported
             // to the host app when 'getLocation()' is called
-            server.error("There are no nearby networks from which the device's location can be determined.");
+            if (_debug) server.log("There are no nearby networks from which the device's location can be determined.");
             _located = false;
             _locating = false;
             return;
@@ -172,7 +185,7 @@ class Location {
 
         if (_debug) server.log("There are " + networks.len() + " WLANs around device");
 
-        local url = LOCATION_CLASS_GEOLOCATION_URL + _geoLocateKey;
+        local url = LOCATION_CLASS_GEOLOCATION_URL + _keyTable.GEOLOCATION_API_KEY;
         local header = {"Content-Type" : "application/json"};
         local body = {};
         body.wifiAccessPoints <- [];
@@ -190,7 +203,7 @@ class Location {
     }
 
     function _processLocation(response) {
-        // This is run *only* on an agent, to process data returned by Google
+        // This is run ONLY on an agent, to process data returned by Google
         if (_debug) server.log("Processing location co-ordinate data received from Google");
         local data = null;
 
@@ -220,14 +233,14 @@ class Location {
                 if (_debug) server.log("Will attempt to re-acquire location in 60s");
                 imp.wakeup(60, _locateFromWLANs.bindenv(this));
             } else {
-                if ("error" in data) _handleError(data.error);
+                if ("error" in data) _handleError(data.error, "Geolocation");
             }
         }
     }
 
     function _getPlace() {
         // Use the obtained co-ordinates to assemble the place name request
-        local url = format("%slatlng=%f,%f&key=%s", LOCATION_CLASS_GEOCODE_URL, _latitude, _longitude, _geoLocateKey);
+        local url = format("%slatlng=%f,%f&key=%s", LOCATION_CLASS_GEOCODE_URL, _latitude, _longitude, _keyTable.GEOCODING_API_KEY);
         local request = http.get(url);
         if (_debug) server.log("Requesting place name data from Google");
         request.sendasync(_processPlace.bindenv(this));
@@ -262,14 +275,14 @@ class Location {
                 if (_debug) server.log("Will attempt to re-acquire location in 60s");
                 imp.wakeup(60, _getPlace.bindenv(this));
             } else {
-                if ("error" in data) _handleError(data.error);
+                if ("error" in data) _handleError(data.error, "Geocoding");
             }
         }
     }
 
     function _getTimezone() {
         // Get the device's timezone using the obtained co-ordinates
-        local url = format("%slocation=%f,%f&timestamp=%d&key=%s", LOCATION_CLASS_TIMEZONE_URL, _latitude, _longitude, time(), _geoLocateKey);
+        local url = format("%slocation=%f,%f&timestamp=%d&key=%s", LOCATION_CLASS_TIMEZONE_URL, _latitude, _longitude, time(), _keyTable.TIMEZONE_API_KEY);
         local request = http.get(url, {});
         if (_debug) server.log("Requesting location timezone data from Google");
         request.sendasync(_processTimezone.bindenv(this));
@@ -325,19 +338,19 @@ class Location {
                 if (_debug) server.log("Will attempt to re-acquire timezone in 60s");
                 imp.wakeup(60, _getTimezone.bindenv(this));
             } else {
-                if ("error" in data) _handleError(data.error);
+                if ("error" in data) _handleError(data.error, "Timezone");
                 _timezoning = false;
             }
         }
     }
 
-    function _handleError(error) {
+    function _handleError(error, api) {
         // This is run *only* on the agent in response to an error condition signalled by Google
         if (error.code == 400) {
             // We can't recover from these errors
             _locating = false;
             if (error.errors[0].reason == "keyInvalid") {
-                server.error("Google reports your Location API Key is invalid. Location cannot be determined");
+                server.error("Google reports your " + api + " key is invalid.");
             } else if (error.errors[0].reason == "parseError") {
                 sever.error("Request JSON data malformed");
             } else {
@@ -362,7 +375,16 @@ class Location {
         }
     }
 
-    // ********** DEVICE private functions **********
+    function _addColons(bssid) {
+        // Format a WLAN basestation MAC for transmission to Google
+        local result = bssid.slice(0, 2);
+        for (local i = 2 ; i < 12 ; i += 2) {
+            result = result + ":" + bssid.slice(i, i + 2)
+        }
+        return result;
+    }
+
+    // ********** DEVICE PRIVATE FUNCTIONS **********
 
     function _setLocale(data) {
         // This is run *only* on a device in response to location data send by the agent
@@ -388,7 +410,7 @@ class Location {
             try {
                 imp.scanwifinetworks(function(wlans) {
                     _networks = wlans;
-                    if (_debug) server.log("Sending WiFi data to agent");
+                    if (_debug) _deviceLogger.log("Sending WiFi data to agent");
                     agent.send("location.class.internal.setwlans", wlans);
                 }.bindenv(this));
             } catch (err) {
@@ -398,7 +420,7 @@ class Location {
         } else {
             // We are on impOS 34 or less, so use sync scanning
             _networks = imp.scanwifinetworks();
-            if (_debug) server.log("Sending WiFi data to agent");
+            if (_debug) _deviceLogger.log("Sending WiFi data to agent");
             agent.send("location.class.internal.setwlans", _networks);
         }
     }
