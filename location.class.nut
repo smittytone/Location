@@ -13,7 +13,7 @@ class Location {
 
     // Copyright Tony Smith, 2016-18
 
-    static VERSION = "1.5.0";
+    static VERSION = "1.5.1";
 
     // Private properties
 
@@ -89,7 +89,7 @@ class Location {
             // Select logging target, which stored in '_deviceLogger', and will be 'seriallog' if 'seriallog.nut'
             // has been loaded BEFORE Location is instantiated on the device, otherwise it will be the
             // imp API object 'server'
-            if ("seriallog" in getroottable()) { _deviceLogger = seriallog; } else { _deviceLogger = server; }
+            _deviceLogger = ("seriallog" in getroottable()) ? seriallog : server;
             if (_debug) _deviceLogger.log("Location class instantiated on the device");
         }
     }
@@ -183,7 +183,13 @@ class Location {
             return;
         }
 
-        if (_debug) server.log("There are " + networks.len() + " WLANs around device");
+        if (_debug) {
+            if (networks.len() == 1) {
+                server.log("There is 1 WLAN near the device");
+            } else {
+                server.log("There are " + networks.len() + " WLANs near the device");
+            }
+        }
 
         local url = LOCATION_CLASS_GEOLOCATION_URL + _keyTable.GEOLOCATION_API_KEY;
         local header = {"Content-Type" : "application/json"};
