@@ -1,4 +1,4 @@
-# Location 1.5.0 #
+# Location 1.5.1 #
 
 Location is a Squirrel class written to provide support for Google’s geolocation API on Electric Imp devices.
 
@@ -105,6 +105,8 @@ Details of the limits Google applies can be found [here](https://developers.goog
 
 ## Release Notes
 
+- 1.5.1
+    - Correct the plurality (or not) of a debug statement.
 - 1.5.0
     - Add support for multiple Google API keys.
     - Add support for [`seriallog.nut`](https://github.com/smittytone/generic/blob/master/seriallog.nut), which enables device-side serial logging if included in the application (always logs to the imp API *server.log()* too).
