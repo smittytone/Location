@@ -1,4 +1,4 @@
-# Location 1.5.1 #
+# Location 1.5.2 #
 
 Location is a Squirrel class written to provide support for Google’s geolocation API on Electric Imp devices.
 
@@ -105,6 +105,8 @@ Details of the limits Google applies can be found [here](https://developers.goog
 
 ## Release Notes
 
+- 1.5.2
+    - Add *setDebug()* method.
 - 1.5.1
     - Correct the plurality (or not) of a debug statement.
 - 1.5.0
@@ -202,6 +204,10 @@ if ("error" in timezone) {
     server.log("Device date/time: " + timezone.dateStr);
 }
 ```
+
+### setDebug(*state*) ###
+
+This method can be used to enable or disable debug logging after instantiation. If no value is passed in, debug logging is enabled.
 
 ## License ##
 
