@@ -106,7 +106,7 @@ Details of the limits Google applies can be found [here](https://developers.goog
 ## Release Notes
 
 - 1.5.2
-    - Add *seDebug(&lt;true/false&gt;)* method.
+    - Add *setDebug()* method.
 - 1.5.1
     - Correct the plurality (or not) of a debug statement.
 - 1.5.0
@@ -205,7 +205,7 @@ if ("error" in timezone) {
 }
 ```
 
-### setDebug(state) ###
+### setDebug(*state*) ###
 
 This method can be used to enable or disable debug logging after instantiation. If no value is passed in, debug logging is enabled.
 
