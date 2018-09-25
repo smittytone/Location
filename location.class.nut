@@ -13,7 +13,7 @@ class Location {
 
     // Copyright Tony Smith, 2016-18
 
-    static VERSION = "1.5.1";
+    static VERSION = "1.5.2";
 
     // Private properties
 
@@ -159,6 +159,11 @@ class Location {
         }
 
         return timezone;
+    }
+
+    function setDebug(value = true) {
+        if (typeof value != "bool") value = true;
+        _debug = value;
     }
 
     // ********** PRIVATE FUNCTIONS - DO NOT CALL DIRECTLY **********
