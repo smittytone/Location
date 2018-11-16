@@ -103,37 +103,6 @@ Google rate-limits access to the geolocation API on both a second-by-second and 
 
 Details of the limits Google applies can be found [here](https://developers.google.com/maps/documentation/geolocation/usage-limits).
 
-## Release Notes
-
-- 1.5.2
-    - Add *setDebug()* method.
-- 1.5.1
-    - Correct the plurality (or not) of a debug statement.
-- 1.5.0
-    - Add support for multiple Google API keys.
-    - Add support for [`seriallog.nut`](https://github.com/smittytone/generic/blob/master/seriallog.nut), which enables device-side serial logging if included in the application (always logs to the imp API *server.log()* too).
-- 1.4.2
-    - Minor changes to comments re. API key usage.
-- 1.4.1
-    - Minor code change: rename constants to be class-specific.
-- 1.4.0
-    - Add support for Google's Timezone API to determine the timezone in which the device is found.
-    - Minor code changes; documentation improvements.
-- 1.3.0
-    - Add support for Google's GeoCoding API to optionally reverse geolocate based on co-ordinates.
-    - Minor code changes; documentation improvements.
-- 1.2.2
-    - WiFi scan code refactor to reduce library memory footprint.
-- 1.2.1
-    - Small code tweaks; clarify that the API key is only needed by the agent constructor.
-- 1.2.0
-    - Make *imp.scanwifinetworks()* calls asynchronous (requires impOS 36).
-    - *locate()* now uses a previously gathered list of WLANs, if present, by default.
-- 1.1.1
-    - Minor code changes.
-- 1.1.0
-    - Initial release.
-
 ## Class Usage: Constructor ##
 
 ### Location(*googleGeoLocationApiKey[, debugFlag]*) ###
@@ -209,8 +178,39 @@ if ("error" in timezone) {
 
 This method can be used to enable or disable debug logging after instantiation. If no value is passed in, debug logging is enabled.
 
+## Release Notes
+
+- 1.5.2
+    - Add *setDebug()* method.
+- 1.5.1
+    - Correct the plurality (or not) of a debug statement.
+- 1.5.0
+    - Add support for multiple Google API keys.
+    - Add support for [`seriallog.nut`](https://github.com/smittytone/generic/blob/master/seriallog.nut), which enables device-side serial logging if included in the application (always logs to the imp API *server.log()* too).
+- 1.4.2
+    - Minor changes to comments re. API key usage.
+- 1.4.1
+    - Minor code change: rename constants to be class-specific.
+- 1.4.0
+    - Add support for Google's Timezone API to determine the timezone in which the device is found.
+    - Minor code changes; documentation improvements.
+- 1.3.0
+    - Add support for Google's GeoCoding API to optionally reverse geolocate based on co-ordinates.
+    - Minor code changes; documentation improvements.
+- 1.2.2
+    - WiFi scan code refactor to reduce library memory footprint.
+- 1.2.1
+    - Small code tweaks; clarify that the API key is only needed by the agent constructor.
+- 1.2.0
+    - Make *imp.scanwifinetworks()* calls asynchronous (requires impOS 36).
+    - *locate()* now uses a previously gathered list of WLANs, if present, by default.
+- 1.1.1
+    - Minor code changes.
+- 1.1.0
+    - Initial release.
+
 ## License ##
 
 The Location class is licensed under the [MIT License](./LICENSE).
 
-Copyright &copy; Tony Smith, 2016-18.
+Copyright &copy; 2016-18 by Tony Smith.
