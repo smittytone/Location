@@ -78,7 +78,6 @@ device.on("ready", function(dummy) {
         } else {
             // No error, so extract the co-ordinates...
             server.log("Device co-ordinates: " + locale.longitude + ", " + locale.latitude);
-            server.log("Device location: " + locale.place);
 
             // ...and call the weather forecast service
             getWeatherForecast(locale.longitude, locale.latitude);
@@ -182,6 +181,7 @@ This method can be used to enable or disable debug logging after instantiation. 
 
 - 1.5.3
     - Ensure exception is thrown when Location is used on a non-WiFi imp.
+    - Better error reporting in *getLocation()*.
 - 1.5.2
     - Add *setDebug()* method.
 - 1.5.1

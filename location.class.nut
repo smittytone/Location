@@ -142,8 +142,8 @@ class Location {
             location.latitude <- _latitude;
             location.placeData <- _placeData;
         } else {
-            if (!_located) location.error <- "Device location not yet obtained or cannot be obtained";
-            if (_locating) location.error <- "Device location not yet obtained. Please try again shortly";
+            if (!_located) location.error <- "Device location not yet obtained. Call locate() first";
+            if (_locating) location.error <- "Device location still being determined. Please try again shortly";
         }
 
         return location;
