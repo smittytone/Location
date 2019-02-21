@@ -1,4 +1,4 @@
-# Location 1.5.2 #
+# Location 1.5.3 #
 
 Location is a Squirrel class written to provide support for Google’s geolocation API on Electric Imp devices.
 
@@ -8,7 +8,7 @@ Google’s [geolocation](https://developers.google.com/maps/documentation/geoloc
 
 Earlier versions of the library supported a single API key, but version 1.5.0 and up allows you to enter specific API keys for each API in use. This is done by passing in a table constructed as follows:
 
-```
+```squirrel
 local keyTable = { "GEOLOCATION_API_KEY" : <YOUR_GEOLOCATION_API_KEY>,
                    "GEOCODING_API_KEY"   : <YOUR_GEOCODING_API_KEY>,
                    "TIMEZONE_API_KEY"    : <YOUR_TIMEZONE_API_KEY> };
@@ -18,13 +18,13 @@ locator <- Location(keyTable);
 
 All three of the table’s slots must be included and must use the names above, even if, for example, you are using one API key for two or three of the APIs:
 
-```
+```squirrel
 local keyTable = { "GEOLOCATION_API_KEY" : <FIRST_API_KEY>,
                    "GEOCODING_API_KEY"   : <FIRST_API_KEY>,
                    "TIMEZONE_API_KEY"    : <SECOND_API_KEY> };
 ```
 
-All of the table’s values must be strings.
+Each of the table’s values must be a string.
 
 If the table does not include all of the named slots, a runtime error will be thrown.
 
@@ -180,6 +180,8 @@ This method can be used to enable or disable debug logging after instantiation. 
 
 ## Release Notes
 
+- 1.5.3
+    - Ensure exception is thrown when Location is used on a non-WiFi imp
 - 1.5.2
     - Add *setDebug()* method.
 - 1.5.1
@@ -213,4 +215,4 @@ This method can be used to enable or disable debug logging after instantiation. 
 
 The Location class is licensed under the [MIT License](./LICENSE).
 
-Copyright &copy; 2016-18 by Tony Smith.
+Copyright &copy; 2016-19 by Tony Smith.

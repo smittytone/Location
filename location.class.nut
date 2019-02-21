@@ -1,6 +1,6 @@
 const LOCATION_CLASS_GEOLOCATION_URL = "https://www.googleapis.com/geolocation/v1/geolocate?key=";
-const LOCATION_CLASS_GEOCODE_URL = "https://maps.googleapis.com/maps/api/geocode/json?";
-const LOCATION_CLASS_TIMEZONE_URL = "https://maps.googleapis.com/maps/api/timezone/json?";
+const LOCATION_CLASS_GEOCODE_URL     = "https://maps.googleapis.com/maps/api/geocode/json?";
+const LOCATION_CLASS_TIMEZONE_URL    = "https://maps.googleapis.com/maps/api/timezone/json?";
 
 class Location {
 
@@ -13,7 +13,7 @@ class Location {
 
     // Copyright Tony Smith, 2016-18
 
-    static VERSION = "1.5.2";
+    static VERSION = "1.5.3";
 
     // Private properties
 
@@ -54,16 +54,16 @@ class Location {
                                   "GEOCODING_API_KEY"   : googleGeoLocationApiKey,
                                   "TIMEZONE_API_KEY"    : googleGeoLocationApiKey };
                 } else {
-                     // Check we have all of the three required keys
-                     if (!("GEOLOCATION_API_KEY" in googleGeoLocationApiKey &&
-                           "GEOCODING_API_KEY" in googleGeoLocationApiKey &&
-                           "TIMEZONE_API_KEY" in googleGeoLocationApiKey)) throw "Location class requires an API-key table with three specific slots (see documentation)";
+                // Check we have all of the three required keys
+                    if (!("GEOLOCATION_API_KEY" in googleGeoLocationApiKey &&
+                          "GEOCODING_API_KEY" in googleGeoLocationApiKey &&
+                          "TIMEZONE_API_KEY" in googleGeoLocationApiKey)) throw "Location class requires an API-key table with three specific slots (see documentation)";
 
-                     // Set the API key table property to the passed in table
-                     _keyTable = googleGeoLocationApiKey;
+                    // Set the API key table property to the passed in table
+                    _keyTable = googleGeoLocationApiKey;
 
-                     // Set the keys to strings
-                     foreach (key, value in _keyTable) {
+                    // Set the keys to strings
+                    foreach (key, value in _keyTable) {
                         if (typeof value != "string") _keyTable[key] = value.tostring();
                     }
                 }
@@ -76,6 +76,9 @@ class Location {
         } else {
             // Code is running on a device
             _isDevice = true;
+
+            // Check device supports WiFi
+            if (!("scanwifinetworks" in imp)) throw "Location class requires a WiFi-enabled imp";
 
             // Register handler for when agent asks for WiFi scan data
             agent.on("location.class.internal.getwlans", function(dummy) {
@@ -416,6 +419,8 @@ class Location {
     function _scan() {
         // This is run *only* on the device to scan for local WiFi networks
         // If impOS 36 is available, we do this asynchronously
+        if (!("scanwifinetworks" in imp)) throw "Location class requires a WiFi-enabled imp";
+            
         if ("info" in imp) {
             // We are on impOS 36 or above, so we can use async scanning
             try {
