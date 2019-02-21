@@ -80,11 +80,11 @@ class Location {
             // Check device supports WiFi
             // From impOS 42, check the network setup
             local v = split(imp.getsoftwareversion(), "-");
-            if (v.tofloat() > 40.0) {
+            if (v[2].tofloat() > 40.0) {
                 local ifcs = imp.net.getserverinterfaces();
                 local gotWiFi = false;
-                for (ifc in ifcs) {
-                    if (ifc[0] == "w") {
+                foreach (ifc in ifcs) {
+                    if (ifc[0] == 'w') {
                         gotWiFi = true;
                         break;
                     }
@@ -157,8 +157,8 @@ class Location {
             location.latitude <- _latitude;
             location.placeData <- _placeData;
         } else {
-            if (!_located) location.error <- "Device location not yet obtained or cannot be obtained";
-            if (_locating) location.error <- "Device location not yet obtained. Please try again shortly";
+            if (!_located) location.error <- "Device location not yet obtained. Call locate() first";
+            if (_locating) location.error <- "Device location still being determined. Please try again shortly";
         }
 
         return location;
