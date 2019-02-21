@@ -181,7 +181,7 @@ This method can be used to enable or disable debug logging after instantiation. 
 ## Release Notes
 
 - 1.5.3
-    - Ensure exception is thrown when Location is used on a non-WiFi imp
+    - Ensure exception is thrown when Location is used on a non-WiFi imp.
 - 1.5.2
     - Add *setDebug()* method.
 - 1.5.1

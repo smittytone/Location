@@ -11,7 +11,7 @@ class Location {
     // The class instance is designed to be called once during a device's current runtime, in order
     // to determine the device’s latitude and longitude, to pass into a weather forecast service, for example.
 
-    // Copyright Tony Smith, 2016-18
+    // Copyright Tony Smith, 2016-19
 
     static VERSION = "1.5.3";
 
