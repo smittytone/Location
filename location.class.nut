@@ -13,7 +13,7 @@ class Location {
 
     // Copyright Tony Smith, 2016-19
 
-    static VERSION = "1.5.3";
+    static VERSION = "1.6.0";
 
     // Private properties
 
@@ -78,7 +78,22 @@ class Location {
             _isDevice = true;
 
             // Check device supports WiFi
-            if (!("scanwifinetworks" in imp)) throw "Location class requires a WiFi-enabled imp";
+            // From impOS 42, check the network setup
+            local v = split(imp.getsoftwareversion(), "-");
+            if (v[2].tofloat() > 40.0) {
+                local ifcs = imp.net.getserverinterfaces();
+                local gotWiFi = false;
+                foreach (ifc in ifcs) {
+                    if (ifc[0] == 'w') {
+                        gotWiFi = true;
+                        break;
+                    }
+                }
+                if (!gotWiFi) throw "Location class requires an imp with WiFi available";
+            } else {
+                // Fall back on availability of imp.scanwifinetworks() for pre-42
+                if (!("scanwifinetworks" in imp)) throw "Location class requires a WiFi-enabled imp";
+            }            
 
             // Register handler for when agent asks for WiFi scan data
             agent.on("location.class.internal.getwlans", function(dummy) {
