@@ -179,7 +179,7 @@ This method can be used to enable or disable debug logging after instantiation. 
 
 ## Release Notes
 
-- 1.5.3
+- 1.5.3 &mdash; *01 March 2019*
     - Ensure exception is thrown when Location is used on a non-WiFi imp.
     - Better error reporting in *getLocation()*.
 - 1.5.2
