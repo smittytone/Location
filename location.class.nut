@@ -11,7 +11,7 @@ class Location {
     // The class instance is designed to be called once during a device's current runtime, in order
     // to determine the device’s latitude and longitude, to pass into a weather forecast service, for example.
 
-    // Copyright Tony Smith, 2016-19
+    // Copyright Tony Smith, 2016-20
 
     static VERSION = "1.6.0";
 
@@ -93,7 +93,7 @@ class Location {
             } else {
                 // Fall back on availability of imp.scanwifinetworks() for pre-42
                 if (!("scanwifinetworks" in imp)) throw "Location class requires a WiFi-enabled imp";
-            }            
+            }
 
             // Register handler for when agent asks for WiFi scan data
             agent.on("location.class.internal.getwlans", function(dummy) {
@@ -435,7 +435,7 @@ class Location {
         // This is run *only* on the device to scan for local WiFi networks
         // If impOS 36 is available, we do this asynchronously
         if (!("scanwifinetworks" in imp)) throw "Location class requires a WiFi-enabled imp";
-            
+
         if ("info" in imp) {
             // We are on impOS 36 or above, so we can use async scanning
             try {

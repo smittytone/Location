@@ -217,4 +217,4 @@ This method can be used to enable or disable debug logging after instantiation. 
 
 The Location class is licensed under the [MIT License](./LICENSE).
 
-Copyright &copy; 2016-19 by Tony Smith.
+Copyright &copy; 2016-20 by Tony Smith.
