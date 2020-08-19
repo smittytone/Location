@@ -1,4 +1,4 @@
-# Location 1.5.3 #
+# Location 1.5.4 #
 
 Location is a Squirrel class written to provide support for Google’s geolocation API on Electric Imp devices.
 
@@ -179,6 +179,8 @@ This method can be used to enable or disable debug logging after instantiation. 
 
 ## Release Notes
 
+- 1.5.4 &mdash; *19 August 2020*
+    - Fix bugs in error-handling code.
 - 1.5.3 &mdash; *01 March 2019*
     - Ensure exception is thrown when Location is used on a non-WiFi imp.
     - Better error reporting in *getLocation()*.

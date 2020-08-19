@@ -11,9 +11,9 @@ class Location {
     // The class instance is designed to be called once during a device's current runtime, in order
     // to determine the device’s latitude and longitude, to pass into a weather forecast service, for example.
 
-    // Copyright Tony Smith, 2016-19
+    // Copyright Tony Smith, 2020
 
-    static VERSION = "1.5.3";
+    static VERSION = "1.5.4";
 
     // Private properties
 
@@ -366,9 +366,9 @@ class Location {
             if (error.errors[0].reason == "keyInvalid") {
                 server.error("Google reports your " + api + " key is invalid.");
             } else if (error.errors[0].reason == "parseError") {
-                sever.error("Request JSON data malformed");
+                server.error("Request JSON data malformed");
             } else {
-                sever.error("Error:" + error.errors[0].reason);
+                server.error("Error:" + error.errors[0].reason);
             }
         }
 
@@ -420,7 +420,7 @@ class Location {
         // This is run *only* on the device to scan for local WiFi networks
         // If impOS 36 is available, we do this asynchronously
         if (!("scanwifinetworks" in imp)) throw "Location class requires a WiFi-enabled imp";
-            
+
         if ("info" in imp) {
             // We are on impOS 36 or above, so we can use async scanning
             try {
